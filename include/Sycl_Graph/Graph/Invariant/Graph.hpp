@@ -24,6 +24,18 @@ namespace Sycl_Graph::Invariant
     Graph() = default;
     Graph(const Vertex_Buffer_t &vertex_buffer, const Edge_Buffer_t &edge_buffer) : Base_t(vertex_buffer, edge_buffer) {}
 
+    template <typename T>
+    uI_t current_size()
+    {
+      if constexpr (Vertex_Buffer_t::template is_Vertex_type<T>)
+        return this->vertex_buf.template current_size<T>();
+      if constexpr(Edge_Buffer_t::template is_Edge_type<T>)
+        return this->edge_buf.template current_size<T>();
+    }
+
+
+    
+    //enable if Vertex_Buffer    
 
     static constexpr auto invalid_id = std::numeric_limits<uI_t>::max();
 
@@ -33,6 +45,8 @@ namespace Sycl_Graph::Invariant
   concept Graph_type = 
   Sycl_Graph::Invariant::Vertex_Buffer_type<typename T::Vertex_Buffer_t> &&
   Sycl_Graph::Invariant::Edge_Buffer_type<typename T::Edge_Buffer_t>;
+
+  
 
   // template <Vertex_Buffer_type ... VBs, Edge_Buffer_type ... EBs>
   //   Graph(const VBs &&... vertex_buffers, const EBs &&... edge_buffers) -> Graph<Vertex_Buffer<VBs...>, Edge_Buffer<EBs...>>;

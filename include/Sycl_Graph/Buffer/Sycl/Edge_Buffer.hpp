@@ -25,10 +25,11 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
  {
   typedef _Edge_t Edge_t;
   typedef typename Edge_t::ID_t ID_t;
-  typedef typename Edge_t::Data_t Data_t;
+  typedef Edge_t Data_t;
+  typedef typename Edge_t::Data_t Edge_Data_t;
   typedef typename Edge_t::Connection_IDs Connection_IDs;
   typedef _uI_t uI_t;
-  typedef Buffer<uI_t, Connection_IDs, Data_t> Base_t;
+  typedef Buffer<_uI_t, typename _Edge_t::Connection_IDs, typename _Edge_t::Data_t> Base_t;
 
   sycl::queue& q = Base_t::q;
   Edge_Buffer(sycl::queue &q, uI_t NE = 1, const sycl::property_list &props = {}): Base_t(q, NE, props){}
@@ -50,8 +51,8 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
 
   void add(const std::vector<Edge_t>& edges)
   {
-          std::vector<Connection_IDs> ids;
-      std::vector<Data_t> data;
+      std::vector<Connection_IDs> ids;
+      std::vector<Edge_Data_t> data;
       data.reserve(edges.size());
       ids.reserve(edges.size());
       for (const auto& e: edges)

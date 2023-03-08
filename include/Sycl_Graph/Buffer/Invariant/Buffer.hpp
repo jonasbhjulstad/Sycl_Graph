@@ -23,31 +23,24 @@
         static constexpr uI_t invalid_id = std::numeric_limits<uI_t>::max();
         
         template <typename T>
-        struct Data_type
-        {
-            static constexpr bool value = (std::is_same_v<T, typename Bs::Data_t> || ...);
-        };
-        template <typename D> requires Data_type<D>::value
+        static constexpr bool Data_type = std::disjunction_v<std::is_same<T, typename Bs::Data_t>...>;
+
+        template <typename ... Ds> requires (Data_type<Ds> && ...)
         static constexpr auto get_buffer_index()
         {
-            return Sycl_Graph::index_of_type<D, typename Bs::Data_t ...>();
+            return std::array<uI_t, sizeof...(Ds)>{index_of_type<Ds, Bs ...>() ...};
         }
 
-        template <typename ... Ds> requires (Data_type<Ds>::value && ...)
-        static constexpr auto get_buffer_index()
+        template <typename D> requires Data_type<D>
+        auto get_buffer() const 
         {
-            return std::array<uI_t, sizeof...(Ds)>{type_index<Ds>() ...};
+            constexpr uI_t idx = get_buffer_index<D>()[0];
+            return std::get<idx>(buffers);
         }
-
-        template <typename D> requires Data_type<D>::value
-        auto&& get_buffer()
+        template <typename ... Ds> requires (Data_type<Ds> && ...)
+        auto get_buffers() const
         {
-            return std::get<D>(buffers);
-        }
-        template <typename ... Ds> requires (Data_type<Ds>::value && ...)
-        auto&& get_buffers()
-        {
-            return std::array{get_buffer<Ds>() ...};
+            return std::array{get_buffer<get_buffer_index<Ds>>() ...};
         }
 
         auto size() const
@@ -57,19 +50,19 @@
             }, buffers);
         }
 
-        template <typename D> requires Data_type<D>::value
+        template <typename D> requires Data_type<D>
         auto size() const
         {
             return get_buffer<D>().size();
         }
 
-        template <typename ... Ds> requires (Data_type<Ds>::value && ...)
+        template <typename ... Ds> requires (Data_type<Ds> && ...)
         void add(const std::vector<Ds> && ... data)
         {
             (get_buffer<Ds>().add(data), ...);
         }
 
-        template <typename ... Ds> requires (Data_type<Ds>::value && ...)
+        template <typename ... Ds> requires (Data_type<Ds> && ...)
         void remove(const std::vector<Ds>&&... elements)
         {
             ((get_buffer<Ds>().remove(elements), ...));
@@ -95,13 +88,13 @@
             return *this;
         }
 
-        template <typename D> requires Data_type<D>::value
+        template <typename D> requires Data_type<D>
         void resize(const uI_t &size)
         {
             get_buffer<D>().resize(size);
         }
 
-        template <typename D> requires Data_type<D>::value
+        template <typename D> requires Data_type<D>
         uI_t current_size() const
         {
             return get_buffer<D>().current_size();

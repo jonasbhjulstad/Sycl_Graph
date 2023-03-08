@@ -12,9 +12,11 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
 
   typedef _Vertex_t Vertex_t;
   typedef typename Vertex_t::ID_t ID_t;
-  typedef typename Vertex_t::Data_t Data_t;
+  typedef Vertex_t Data_t;
+  typedef typename Vertex_t::Data_t Vertex_Data_t;
   typedef _uI_t uI_t;
-  typedef Buffer<uI_t,ID_t, Data_t> Base_t;
+  typedef Buffer<_uI_t, typename _Vertex_t::ID_t,
+                                     typename _Vertex_t::Data_t> Base_t;
 
   sycl::queue &q = Base_t::q;
   Vertex_Buffer(sycl::queue &q, uI_t NV = 1, const sycl::property_list &props = {})
@@ -39,7 +41,7 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
   void add(const std::vector<Vertex_t>& vertices)
   {
     std::vector<ID_t> ids;
-    std::vector<Data_t> data;
+    std::vector<Vertex_Data_t> data;
     data.reserve(vertices.size());
     ids.reserve(vertices.size());
     for (const auto &v : vertices) {

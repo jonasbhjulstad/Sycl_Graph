@@ -7,7 +7,7 @@
 
 #include <Sycl_Graph/Algorithms/Properties/Sycl/Property_Extractor.hpp>
 #include <Sycl_Graph/Algorithms/Properties/Sycl/Degree_Properties.hpp>
-
+#include <iostream>
 using namespace Sycl_Graph;
 typedef Sycl_Graph::Invariant::Vertex<float> fVertex_t;
 typedef Sycl_Graph::Invariant::Vertex<int> iVertex_t;
@@ -48,10 +48,17 @@ int main()
 
     auto properties = Sycl_Graph::Sycl::extract_properties(graph, extractors, q);
 
-    std::cout << "In degree of i_f_edges: " << std::get<0>(properties) << std::endl;
-    std::cout << "Out degree of i_f_edges: " << std::get<1>(properties) << std::endl;
-    std::cout << "In degree of f_i_edges: " << std::get<2>(properties) << std::endl;
-    std::cout << "Out degree of f_i_edges: " << std::get<3>(properties) << std::endl;
+    auto printvecpair = [&](const auto& vec) {
+        for (const auto& v : vec) {
+            std::cout << v.first << " " << v.second << std::endl;
+        }
+        std::cout << std::endl;
+    };
+
+    std::apply([&](auto&&... args) {
+        (printvecpair(args), ...);
+    }, properties);
+
     
 
     return 0;

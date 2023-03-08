@@ -15,18 +15,19 @@ namespace Sycl_Graph {
     static const std::size_t value = 1 + Tuple_Index<T, std::tuple<Types...>>::value;
   };
 
-  // Get the index of a type in a parameter pack
-  template <typename T, typename... Types> struct index_of_type;
 
-  template <typename T, typename... Rest> struct index_of_type<T, T, Rest...>
-      : std::integral_constant<std::size_t, 0> {};
 
-  template <typename T, typename First, typename... Rest> struct index_of_type<T, First, Rest...>
-      : std::integral_constant<std::size_t, 1 + index_of_type<T, Rest...>::value> {};
+template <typename T, typename First, typename ... Rest>
+constexpr auto index_of_type() {
+  if constexpr (sizeof...(Rest) == 0)
+    return 0;
+  else
+    return 1 + index_of_type<T, Rest...>();
+}
 
   template <typename... Ts, typename... Types>
   constexpr auto get_by_types(const std::tuple<Types...>& tuple) {
-    return std::make_tuple(std::get<index_of_type<Ts, Types...>::value>(tuple)...);
+    return std::make_tuple(std::get<index_of_type<Ts, Types>>(tuple)...);
   }
 
   template <typename T, typename... Ts> struct is_in_pack {
@@ -37,7 +38,7 @@ namespace Sycl_Graph {
     std::array<T, sizeof...(Ts)> values;
     Type_Map() = default;
     Type_Map(const std::tuple<Ts...>& tuple) {}
-    template <typename U> T get() { return values[index_of_type<U, Ts...>::value]; }
+    template <typename U> T get() { return values[index_of_type<U, Ts...>]; }
   };
 
   template <typename T, typename T_Array>

@@ -18,7 +18,7 @@ namespace Sycl_Graph::Sycl {
     return q.submit([&](sycl::handler& h) {
       auto apply_acc = std::apply(
           [&](auto&... apply_buf) {
-            return std::make_tuple(apply_buf.template get_access<sycl::access::mode::read>(h) ...);
+            return std::make_tuple(apply_buf.template get_access<sycl::access::mode::read>(h)...);
           },
           apply_bufs);
       auto edge_acc = graph.edge_buf.template get_access<sycl::access::mode::read, Edge_t>(h);
@@ -53,13 +53,13 @@ namespace Sycl_Graph::Sycl {
       h.depends_on(apply_event);
       auto apply_acc = std::apply(
           [&](auto&... apply_buf) {
-            return std::make_tuple(apply_buf.template get_access<sycl::access::mode::read>(h) ...);
+            return std::make_tuple(apply_buf.template get_access<sycl::access::mode::read>(h)...);
           },
           apply_bufs);
       auto accumulate_acc = std::apply(
           [&](auto&... accumulate_buf) {
-            return std::make_tuple(accumulate_buf.template get_access<sycl::access::mode::write>(h)
-                                   ...);
+            return std::make_tuple(
+                accumulate_buf.template get_access<sycl::access::mode::write>(h)...);
           },
           accumulate_bufs);
       auto edge_acc = graph.edge_buf.template get_access<sycl::access::mode::read, Edge_t>(h);
@@ -87,6 +87,8 @@ namespace Sycl_Graph::Sycl {
       });
     });
   }
+
+
 
   template <Sycl_Graph::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
   auto extractor_apply(
@@ -134,67 +136,69 @@ namespace Sycl_Graph::Sycl {
     return accumulate_events;
   }
   template <Sycl_Graph::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
-  std::tuple<sycl::buffer<typename Es::Property_t...>> construct_apply_buffers(
-      Graph_t& graph, const std::tuple<Es...>& extractors, sycl::queue& q) {
+  std::tuple<sycl::buffer<typename Es::Property_t>...> construct_apply_buffers(
+      Graph_t& graph, const std::tuple<Es...>& extractors) {
     auto edge_sizes = std::apply(
         [&](auto... extractor) {
-          return std::make_tuple(graph.edge_buf.template get_size<typename Es::Property_t>()...);
+          return std::make_tuple(graph.template current_size<typename Es::Edge_t>()...);
         },
         extractors);
 
 
-
-    std::tuple<sycl::buffer<typename Es::Property_t...>> bufs = 
-    
-    std::apply([&](auto& ... edge_size)
-    {
-    std::apply(
-        [&](auto... extractors) {
-          return std::make_tuple(sycl::buffer<typename Es::Property_t>(edge_size, q)...);
+    std::tuple<sycl::buffer<typename Es::Property_t>...> bufs = std::apply(
+        [&](auto&... edge_size) {
+          return std::make_tuple(
+              sycl::buffer<typename Es::Property_t>(edge_size)...);
         },
-        extractors);
-    }, edge_sizes);
+        edge_sizes);
+
+    return bufs;
   }
 
   template <Sycl_Graph::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
-  std::tuple<sycl::buffer<typename Es::Accumulation_Property_t...>> construct_accumulation_buffers(
-      Graph_t& graph, const std::tuple<Es...>& extractors, sycl::queue& q) {
-      auto edge_sizes = std::apply(
-      [&](auto... extractor) {
-        return std::make_tuple((graph.edge_buf.template get_size<typename Es::Property_t>(),
-                                ...));
-      },
-      extractors);
-    std::tuple<sycl::buffer<typename Es::Accumulation_Property_t...>> bufs = 
-    std::apply([&](auto& ... edge_size)
-    {
-    std::apply(
-        [&](auto... extractors) {
-          return std::make_tuple(sycl::buffer<typename Es::Property_t>(edge_size, q)...);
+  std::tuple<sycl::buffer<typename Es::Accumulation_Property_t>...> construct_accumulation_buffers(
+      Graph_t& graph, const std::tuple<Es...>& extractors) {
+    
+    auto edge_sizes = std::apply(
+        [&](auto... extractor) {
+          return std::make_tuple(graph.edge_buf.template current_size<typename Es::Edge_t>()...);
         },
         extractors);
-    }, edge_sizes);
+    std::tuple<sycl::buffer<typename Es::Accumulation_Property_t>...> bufs = std::apply(
+        [&](auto&... edge_size) {
+          return std::apply(
+              [&](auto... extractors) {
+                return std::make_tuple(
+                    sycl::buffer<typename Es::Accumulation_Property_t>(edge_size)...);
+              },
+              extractors);
+        },
+        edge_sizes);
+    return bufs;
   }
 
   template <Sycl_Graph::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
   std::tuple<std::vector<typename Es::Accumulation_Property_t>...> extract_properties(
       Graph_t& graph, const std::tuple<Es...>& extractors, sycl::queue& q) {
-    auto apply_buffers = construct_apply_buffers(graph, extractors, q);
-    auto accumulate_buffers = construct_accumulation_buffers(graph, extractors, q);
+    auto apply_buffers = construct_apply_buffers(graph, extractors);
+    auto accumulate_buffers = construct_accumulation_buffers(graph, extractors);
+
 
     auto apply_events = extractor_apply(graph, extractors, apply_buffers, accumulate_buffers, q);
     auto accumulate_events = extractor_accumulate(graph, extractors, apply_buffers,
                                                   accumulate_buffers, q, apply_events);
-    auto accumulate_acc = std::apply(
-        [&](auto... accumulate_bufs) {
-          return std::make_tuple(
-              (accumulate_bufs.template get_access<sycl::access::mode::read>(q), ...));
-        },
-        accumulate_buffers);
+    // auto accumulate_acc = std::apply(
+    //     [&](auto... accumulate_bufs) {
+    //       return std::make_tuple(
+    //           (accumulate_bufs.template get_access<sycl::access::mode::read>(q), ...));
+    //     },
+    //     accumulate_buffers);
 
-    //TODO: for-loop to extract all properties
+    // TODO: for-loop to extract all properties
     q.wait_and_throw();
-    
+
+    return {};
   }
+
 }  // namespace Sycl_Graph::Sycl
 #endif

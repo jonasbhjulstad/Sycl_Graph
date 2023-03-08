@@ -35,6 +35,9 @@ namespace Sycl_Graph::Invariant
         template <typename T>
         static constexpr bool is_Data_type = std::disjunction_v<std::is_same<T, typename VBs::Vertex_t::Data_t>...>;
 
+        template <typename T>
+        static constexpr bool is_Vertex_type = std::disjunction_v<std::is_same<T, typename VBs::Vertex_t>...>;
+
         template <typename V>
         void add(const std::vector<uI_t> &&ids, const std::vector<V> &&data)
         {
@@ -80,18 +83,18 @@ namespace Sycl_Graph::Invariant
         }
 
         template <typename V>
-        auto get_vertices()
+        auto get_vertices() const
         {
             return get_buffer<V>().get_vertices();
         }
 
         template <typename V>
-        auto get_vertices(const std::vector<uI_t> &ids)
+        auto get_vertices(const std::vector<uI_t> &ids) const
         {
             return get_buffer<V>().get_vertices(ids);
         }
 
-        auto get_vertices()
+        auto get_vertices() const
         {
             return std::make_tuple((get_buffer<VBs>().get_vertices(), ...));
         }
