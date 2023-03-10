@@ -15,37 +15,66 @@ namespace Sycl_Graph::Sycl {
     };
 
     template <typename T0, typename T1> struct _Has_Same_Edge_Buf {
-      static constexpr bool value = std::is_same_v<typename T0::Edge_Buffer_t, typename T1::>;
+      static constexpr bool value = std::is_same_v<typename T0::Edge_Buffer_t, typename T1::Edge_Buffer_t>;
     };
   } // namespace _detail
 
-template <template <typename, typename> Predicate, typename... Ts>
-constexpr auto separate_by_type(std::tuple<Ts...> types) {
-  constexpr auto unique_member_types = unique_types(types);
+template <typename T, typename... Ts>
+struct unique_tuple : std::type_identity<T> {};
 
-  return std::apply(
-      [&](auto... unique_types) {
+template <typename... Ts, typename U, typename... Us>
+struct unique_tuple<std::tuple<Ts...>, U, Us...>
+    : std::conditional_t<(std::is_same_v<U, Ts> || ...)
+                       , unique_tuple<std::tuple<Ts...>, Us...>
+                       , unique_tuple<std::tuple<Ts..., U>, Us...>> {};
+
+
+template <template <typename, typename> typename  Predicate, typename... Ts>
+constexpr auto separate_by_type(std::tuple<Ts...> types) {
+    using Unique_Types = typename unique_tuple<Ts ...>::type;
+      return 
         std::apply(
             [](auto... ts) {
               return std::tuple_cat(
-                  std::conditional_t<
-                      (std::is_same_v<Predicate<decltype(unique_types), decltype(types)>::value>),
-                      std::tuple<decltype(ts)>, std::tuple<>>{}...);
+                  std::conditional_t<Predicate<Unique_Types, decltype(ts)>::value, std::tuple<decltype(ts)>, std::tuple<>>::type ...);
+            },
+            types);
+}
+
+template <typename ... Ts>
+constexpr auto unique_types(std::tuple<Ts...> types) {
+  return separate_by_type<std::is_same>(types);
+}
+
+template <typename ... Ts>
+constexpr auto unique_type_by_subtype(std::tuple<Ts...> types) {
+  return separate_by_type<std::is_same>(types);
+}
+
+template <template <typename, typename> typename  Predicate, template <typename, typename> typename UniquePredicate, typename... Ts>
+constexpr auto separate_by_subtype(std::tuple<Ts...> types) {
+  constexpr auto unique_member_types = separate_by_type<UniquePredicate>(types);
+
+  return std::apply(
+      [&](auto... unique_type) {return 
+        std::apply(
+            [](auto... ts) {
+              return std::tuple_cat(
+                  std::conditional_t<Predicate<decltype(ts), decltype(unique_type)>::value, std::tuple<decltype(ts)>, std::tuple<>>::type ...);
             },
             types);
       },
       unique_member_types);
 }
-
-template <typename... Ts> constexpr auto separate_by_edge_type(std::tuple<Ts...>& types) {
-  return separate_by_type<_detail::_Has_Same_Edge>(types);
+template <typename... Ts> constexpr auto separate_by_edge_type(const std::tuple<Ts...>& types) {
+  return separate_by_subtype<_detail::_Has_Same_Edge, _detail::_Has_Same_Edge>(types);
 }
 
-template <typename... Ts> constexpr auto separate_by_vertex_type(std::tuple<Ts...>& types) {
-  return separate_by_type<_detail::_Has_Same_Vertex>(types);
+template <typename... Ts> constexpr auto separate_by_vertex_type(const std::tuple<Ts...>& types) {
+  return separate_by_subtype<_detail::_Has_Same_Vertex, _detail::_Has_Same_Vertex>(types);
 }
 
-template <typename... Ts> constexpr auto separate_by_type(std::tuple<Ts...>& types) {
+template <typename... Ts> constexpr auto separate_by_type(const std::tuple<Ts...>& types) {
   return separate_by_type<std::is_same>(types);
 }
 }  // namespace Sycl_Graph::Sycl

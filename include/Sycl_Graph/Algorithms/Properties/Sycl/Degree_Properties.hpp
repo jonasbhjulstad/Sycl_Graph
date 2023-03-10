@@ -27,8 +27,8 @@ namespace Sycl_Graph::Sycl
         typedef std::pair<ID_t, uI_t> Accumulation_Property_t;
         typedef sycl::accessor<Accumulation_Property_t, 1, sycl::access::mode::write> Accumulate_Access_t; 
         Degree_Property property;
-
-
+        
+        Degree_Extractor() = default;
         Degree_Extractor(const Vertex_Buffer_t& vertex_buffer, const Edge_Buffer_t& edge_buffer, Degree_Property property = In_Degree): property(property){}
 
         Property_t apply(const Edge_t& edge_target, const From_t& from, const To_t& to)

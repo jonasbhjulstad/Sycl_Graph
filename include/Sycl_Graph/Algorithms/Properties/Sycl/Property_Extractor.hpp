@@ -3,6 +3,7 @@
 
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Algorithms/Properties/Invariant/Property_Extractor.hpp>
+#include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
 #include <tuple>
 
 namespace Sycl_Graph::Sycl {
@@ -93,8 +94,8 @@ namespace Sycl_Graph::Sycl {
   template <Sycl_Graph::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
   auto extractor_apply(
       Graph_t& graph, const std::tuple<Es...>& extractors,
-      std::tuple<sycl::buffer<typename Es::Property_t...>>& apply_buf,
-      std::tuple<sycl::buffer<typename Es::Accumulation_Property_t...>>& accumulate_buf,
+      std::tuple<sycl::buffer<typename Es::Property_t> ...>& apply_buf,
+      std::tuple<sycl::buffer<typename Es::Accumulation_Property_t> ...>& accumulate_buf,
       sycl::queue& q) {
     auto extractor_list = separate_by_edge_type(extractors);
     auto apply_buf_list = separate_by_type(apply_buf);
@@ -114,8 +115,8 @@ namespace Sycl_Graph::Sycl {
   template <Sycl_Graph::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
   auto extractor_accumulate(
       Graph_t& graph, const std::tuple<Es...>& extractors,
-      std::tuple<sycl::buffer<typename Es::Property_t...>>& apply_buf,
-      std::tuple<sycl::buffer<typename Es::Accumulation_Property_t...>>& accumulate_buf,
+      std::tuple<sycl::buffer<typename Es::Property_t> ...>& apply_buf,
+      std::tuple<sycl::buffer<typename Es::Accumulation_Property_t> ...>& accumulate_buf,
       sycl::queue& q, auto& apply_events) {
     auto extractor_list = separate_by_edge_type(extractors);
     auto apply_buf_list = separate_by_type(apply_buf);
@@ -177,13 +178,14 @@ namespace Sycl_Graph::Sycl {
     return bufs;
   }
 
+
   template <Sycl_Graph::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
   std::tuple<std::vector<typename Es::Accumulation_Property_t>...> extract_properties(
       Graph_t& graph, const std::tuple<Es...>& extractors, sycl::queue& q) {
-    auto apply_buffers = construct_apply_buffers(graph, extractors);
+    std::tuple<sycl::buffer<typename Es::Property_t> ...> apply_buffers = construct_apply_buffers(graph, extractors);
     auto accumulate_buffers = construct_accumulation_buffers(graph, extractors);
 
-
+    
     auto apply_events = extractor_apply(graph, extractors, apply_buffers, accumulate_buffers, q);
     auto accumulate_events = extractor_accumulate(graph, extractors, apply_buffers,
                                                   accumulate_buffers, q, apply_events);
