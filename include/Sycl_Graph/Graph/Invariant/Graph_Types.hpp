@@ -15,9 +15,12 @@ namespace Sycl_Graph::Invariant
     template <Sycl_Graph::Base::Edge_type E, Vertex_type _To, Vertex_type _From>
     struct Edge: public E
     {
-        Edge(typename E::ID_t to, typename E::ID_t from): E(to, from) {}
-        typedef _To To_t;
+        typedef typename E::ID_t ID_t;
+        typedef typename E::Data_t Data_t;
         typedef _From From_t;
+        typedef _To To_t;
+        Edge(typename E::ID_t to, typename E::ID_t from): E(to, from) {}
+        
     };
 
 

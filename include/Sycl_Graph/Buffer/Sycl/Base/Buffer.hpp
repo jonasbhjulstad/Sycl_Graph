@@ -6,17 +6,30 @@
 #include <Sycl_Graph/type_helpers.hpp>
 #include <tuple>
 #include <algorithm>
-namespace Sycl_Graph::Sycl
+namespace Sycl_Graph::Sycl::Base
 {
 
     template <sycl::access::mode Mode, typename... Ds>
     struct Buffer_Accessor
     {
+
         Buffer_Accessor(sycl::buffer<Ds, 1> &...bufs, sycl::handler &h,
                         sycl::property_list props = {})
             : accessors(std::make_tuple({bufs, h, props} ...))
         {
         }
+
+        static Buffer_Accessor<Mode, Ds...> make_accessor(std::tuple<sycl::buffer<Ds, 1> ...> &bufs, sycl::handler &h,
+                                                   sycl::property_list props = {})
+        {
+            return std::apply([&h, &props](auto &...bufs) { return Buffer_Accessor<Mode, Ds...>(bufs..., h, props); }, bufs);
+        }
+
+        size_t size() const
+        {
+            return std::get<0>(accessors).size();
+        }
+
         template <typename D>
         sycl::accessor<D, 1, Mode> get()
         {
@@ -24,6 +37,17 @@ namespace Sycl_Graph::Sycl
         }
         std::tuple<sycl::accessor<Ds, 1, Mode> ...> accessors;
     };
+
+    template <sycl::access::mode Mode, typename D>
+    struct Buffer_Accessor<Mode, D>: sycl::accessor<D, 1, Mode>
+    {
+        Buffer_Accessor(sycl::buffer<D, 1> &buf, sycl::handler &h,
+                        sycl::property_list props = {})
+            : sycl::accessor<D, 1, Mode>(buf, h, props)
+        {
+        }
+    };
+
 
     template <std::unsigned_integral uI_t, typename... Ds>
     struct Buffer
@@ -44,26 +68,26 @@ namespace Sycl_Graph::Sycl
 
         uI_t current_size() const { return curr_size; }
 
-
-        // returns a buffer accessor with all types
-        template <sycl::access::mode Mode>
-        Buffer_Accessor<Mode, Ds...> get_access(sycl::handler &h)
-        {
-            return Buffer_Accessor<Mode, Ds...>(bufs, h);
-        }
-
-        template <sycl::access::mode Mode, typename D>
-        sycl::accessor<D, 1, Mode> get_access(sycl::handler &h)
-        {
-            return std::get<sycl::accessor<D, 1, Mode>>(bufs);
-        }
+        // template <typename T>
+        // static constexpr bool is_Buffer_Type = std::disjunction_v<std::is_same<T, Bs>...>;
 
         // returns a buffer accessor with only the specified types
         template <sycl::access::mode Mode, typename... D_subset>
-        Buffer_Accessor<Mode, D_subset...> get_access(sycl::handler &h)
+        auto get_access(sycl::handler &h)
         {   
-            auto types = indices_of_types<D_subset ..., Ds ...>();
-            return Buffer_Accessor<Mode, D_subset...>(get_by_types<D_subset ..., Ds ...>(bufs), h);
+            if constexpr((std::is_same_v<D_subset, void> || ...))
+            {
+                return Buffer_Accessor<Mode, Ds ...>::make_accessor(bufs, h);
+            }
+            else
+            {
+                return Buffer_Accessor<Mode, D_subset...>(get_by_types<D_subset ..., Ds ...>(bufs), h);
+            }
+        }
+
+        auto get_buffers() const
+        {
+            return bufs;
         }
 
         void resize(uI_t new_size)
@@ -156,7 +180,8 @@ namespace Sycl_Graph::Sycl
             return std::accumulate(buffer_type_sizes.begin(), buffer_type_sizes.end(), 0) * max_size();
         }
     };
-
+    template <typename T>
+    concept Buffer_type = true;
 
 } // namespace Sycl_Graph::Sycl
 #endif

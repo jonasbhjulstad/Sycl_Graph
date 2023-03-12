@@ -18,7 +18,7 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 set(SYCL_GRAPH_CUDA_FLAGS -fsycl-targets=nvptx64-nvidia-cuda)
-option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" OFF)
+option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" ON)
 include(cmake/external_packages.cmake)
 
 set(SYCL_GRAPH_CLANG_BINARY_DIR "${IntelDPCPP_DIR}/../bin-llvm/clang++" CACHE STRING "Path to OneAPI clang/clang++ directory")
@@ -29,7 +29,7 @@ include(cmake/ccache.cmake)
 add_compile_options(-Wdeprecated-declarations)
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
-file(GLOB_RECURSE SYCL_GRAPH_HEADER_FILES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/*.hpp")
+file(GLOB_RECURSE SYCL_GRAPH_HEADER_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
 
 # ---- Create library ----
 add_library(${PROJECT_NAME} INTERFACE ${SYCL_GRAPH_HEADER_FILES})

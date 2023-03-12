@@ -69,6 +69,9 @@ namespace Sycl_Graph::Base
         Edge(ID_t to, ID_t from)
             : ids{to, from} {}
         Connection_IDs ids;
+
+        ID_t& to = ids.to;
+        ID_t& from = ids.from;
     };
 
 

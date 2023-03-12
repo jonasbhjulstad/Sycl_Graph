@@ -25,6 +25,9 @@
         template <typename T>
         static constexpr bool Data_type = std::disjunction_v<std::is_same<T, typename Bs::Data_t>...>;
 
+        template <typename T>
+        static constexpr bool is_Buffer_Type = std::disjunction_v<std::is_same<T, Bs>...>;
+
         template <typename ... Ds> requires (Data_type<Ds> && ...)
         static constexpr auto get_buffer_index()
         {
@@ -40,7 +43,12 @@
         template <typename ... Ds> requires (Data_type<Ds> && ...)
         auto get_buffers() const
         {
-            return std::array{get_buffer<get_buffer_index<Ds>>() ...};
+            return std::make_tuple(get_buffer<get_buffer_index<Ds>>() ...);
+        }
+
+        auto get_buffers() const
+        {
+            return buffers;
         }
 
         auto size() const
@@ -105,9 +113,10 @@
             return std::apply([](auto... args) { return (args.current_size() + ...); }, buffers); 
         }
 
+        template <typename D> requires Data_type<D>
         uI_t max_size() const
         {
-            return std::apply([](auto... args) { return (args.max_size() + ...); }, buffers);
+            return get_buffer<D>().max_size();
         }
     };
 

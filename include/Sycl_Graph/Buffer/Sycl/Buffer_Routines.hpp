@@ -245,9 +245,11 @@ namespace Sycl_Graph
   template <typename T, std::unsigned_integral uI_t = uint32_t>
   std::vector<uI_t> buffer_get_indices(sycl::buffer<T, 1> &buf, sycl::queue &q, const std::vector<T> &elements)
   {
+    if (buf.size() > 0)
+    {
     std::vector<uI_t> res(elements.size(), std::numeric_limits<uI_t>::max());
     sycl::buffer<T, 1> elements_buf(elements.data(), sycl::range<1>(elements.size()));
-    sycl::buffer<uI_t, 1> res_buf(res.data(), sycl::range<1>(buf.size()));
+    sycl::buffer<uI_t, 1> res_buf(res.data(), sycl::range<1>(elements.size()));
     auto event = q.submit([&](sycl::handler &h)
                           {
       auto acc = buf.template get_access<sycl::access::mode::read>(h);
@@ -260,7 +262,7 @@ namespace Sycl_Graph
           {
             if (acc[j] == elements_acc[i])
             {
-              res_acc[i] = j;
+              res_acc[j] = i;
               return;
             }
           }
@@ -276,6 +278,8 @@ namespace Sycl_Graph
                   { return i == std::numeric_limits<uI_t>::max(); });
 
     return res;
+    }
+    return {};
   }
 
   template <std::unsigned_integral uI_t = uint32_t, typename... Ts>

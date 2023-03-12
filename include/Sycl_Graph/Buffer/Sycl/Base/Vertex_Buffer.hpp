@@ -1,9 +1,22 @@
 #ifndef SYCL_GRAPH_BUFFER_SYCL_VERTEX_BUFFER_HPP
 #define SYCL_GRAPH_BUFFER_SYCL_VERTEX_BUFFER_HPP
 #include <CL/sycl.hpp>
-#include <Sycl_Graph/Buffer/Sycl/Buffer.hpp>
+#include <Sycl_Graph/Buffer/Sycl/Base/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
-namespace Sycl_Graph::Sycl {
+namespace Sycl_Graph::Sycl::Base {
+
+template <Sycl_Graph::Base::Vertex_type Vertex_t, sycl::access::mode Mode>
+struct Vertex_Accessor {
+  typedef typename Vertex_t::uI_t uI_t;
+  typedef typename Vertex_t::Data_t Data_t;
+  typedef typename Vertex_t::ID_t ID_t;
+  Vertex_Accessor(sycl::buffer<ID_t, 1> &id_buf, sycl::buffer<Data_t, 1>& data_buf, sycl::handler &h,
+                sycl::property_list props = {})
+      : id(id_buf, h, props), data(data_buf, h, props) {}
+  sycl::accessor<ID_t, 1, Mode> id;
+  sycl::accessor<Data_t, 1, Mode> data;
+};
+
 
 template <Sycl_Graph::Base::Vertex_type _Vertex_t,
           std::unsigned_integral _uI_t = uint32_t>
@@ -62,6 +75,13 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
           Vertex_t(Vertex_tuple.first[i], Vertex_tuple.second[i]));
     }
     return vertices;
+  }
+
+  template <sycl::access_mode Mode>
+  Vertex_Accessor<Vertex_t, Mode> get_access(sycl::handler& h)
+  {
+    auto [id_buf, data_buf] = this->get_buffers();
+    return Vertex_Accessor<Vertex_t, Mode>(id_buf, data_buf, h);
   }
 
   void remove(const std::vector<ID_t> &ids) {

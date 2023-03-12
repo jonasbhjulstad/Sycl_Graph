@@ -1,14 +1,15 @@
-#ifndef SYCL_GRAPH_INVARIANT_EDGE_BUFFER_HPP
-#define SYCL_GRAPH_INVARIANT_EDGE_BUFFER_HPP
+#ifndef SYCL_GRAPH_SYCL_INVARIANT_EDGE_BUFFER_HPP
+#define SYCL_GRAPH_SYCL_INVARIANT_EDGE_BUFFER_HPP
 #include <Sycl_Graph/type_helpers.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Invariant/Buffer.hpp>
 
-namespace Sycl_Graph::Invariant
+namespace Sycl_Graph::Sycl::Invariant
 {    
-    template <Sycl_Graph::Base::Edge_Buffer_type... EBs>
-    struct Edge_Buffer: public Sycl_Graph::Invariant::Buffer<EBs...>
+    
+    template <Sycl_Graph::Sycl::Base::Edge_Buffer_type... EBs>
+    struct Edge_Buffer: public Buffer<EBs...>
     {
-        typedef Sycl_Graph::Sycl::Invariant::Buffer<EBs...> Base_t;
+        typedef Buffer<EBs...> Base_t;
         Edge_Buffer() = default;
         Edge_Buffer(const EBs &...buffers) : Base_t(buffers ...) {}
         Edge_Buffer(const EBs &&...buffers) : Base_t(buffers ...) {}
@@ -26,7 +27,8 @@ namespace Sycl_Graph::Invariant
         static constexpr bool is_Edge_type = std::disjunction_v<std::is_same<T, typename EBs::Edge_t>...>;
         static constexpr uI_t invalid_id = std::numeric_limits<uI_t>::max();
 
-        template <Edge_type E>
+
+        template <Sycl_Graph::Invariant::Edge_type E>
         auto get_edges() const
         {
             return get_buffer<E>().get_edges();
@@ -41,6 +43,19 @@ namespace Sycl_Graph::Invariant
         auto get_edges() const
         {
             return std::make_tuple((get_buffer<EBs>().get_edges(), ...));
+        }
+
+        template <sycl::access_mode Mode, typename Buffer_t, typename D = void>
+        auto get_access(sycl::handler &h) const
+        {
+            if constexpr(is_Edge_type<Buffer_t>)
+            {
+                return this->template get_buffer<Buffer_t>().template get_access<Mode>(h);
+            }
+            else
+            {
+                return static_cast<Base_t*>(this)->template get_buffer<Buffer_t>().template get_access<Mode, D>(h);
+            }
         }
     };
 
