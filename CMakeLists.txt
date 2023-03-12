@@ -30,7 +30,6 @@ add_compile_options(-Wdeprecated-declarations)
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
 file(GLOB_RECURSE SYCL_GRAPH_HEADER_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
-
 # ---- Create library ----
 add_library(${PROJECT_NAME} INTERFACE ${SYCL_GRAPH_HEADER_FILES})
 target_include_directories(${PROJECT_NAME} INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")

@@ -1,18 +1,27 @@
 #ifndef SYCL_GRAPH_BUFFER_SYCL_VERTEX_BUFFER_HPP
 #define SYCL_GRAPH_BUFFER_SYCL_VERTEX_BUFFER_HPP
 #include <CL/sycl.hpp>
+#include <type_traits>
+#include <concepts>
 #include <Sycl_Graph/Buffer/Sycl/Base/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
 namespace Sycl_Graph::Sycl::Base {
 
 template <Sycl_Graph::Base::Vertex_type Vertex_t, sycl::access::mode Mode>
 struct Vertex_Accessor {
-  typedef typename Vertex_t::uI_t uI_t;
   typedef typename Vertex_t::Data_t Data_t;
   typedef typename Vertex_t::ID_t ID_t;
   Vertex_Accessor(sycl::buffer<ID_t, 1> &id_buf, sycl::buffer<Data_t, 1>& data_buf, sycl::handler &h,
                 sycl::property_list props = {})
       : id(id_buf, h, props), data(data_buf, h, props) {}
+
+  Vertex_t operator[](std::size_t i) const{
+    return Vertex_t(id[i], data[i]);}
+
+  Vertex_t operator[](sycl::id<1> i) const
+  {
+    return Vertex_t(id[i], data[i]);}
+
   sycl::accessor<ID_t, 1, Mode> id;
   sycl::accessor<Data_t, 1, Mode> data;
 };

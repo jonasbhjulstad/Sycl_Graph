@@ -4,6 +4,8 @@
 #include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
 #include <Sycl_Graph/type_helpers.hpp>
+#include <concepts>
+#include <type_traits>
 #include <tuple>
 #include <algorithm>
 namespace Sycl_Graph::Sycl::Base

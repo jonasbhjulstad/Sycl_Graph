@@ -32,17 +32,17 @@ namespace Sycl_Graph::Sycl {
           },
           apply_bufs);
 
-      h.parallel_for(edge_acc.size(), [=](sycl::id<1> i) {
-        const Edge_t edge = edge_acc[i];
-        const From_t& from_vertex = from_acc[edge.from];
-        const To_t& to_vertex = to_acc[edge.to];
-        std::apply(
-            [&](auto... ex) {
-              std::apply([&](auto&... ap) { ((apply_acc[i] = ex.apply(edge, from_vertex, to_vertex)), ...); },
-                         apply_acc);
-            },
-            extractors);
-      });
+      // h.parallel_for(edge_acc.size(), [=](sycl::id<1> i) {
+      //   const Edge_t edge = edge_acc[i];
+      //   const From_t& from_vertex = from_acc[edge.from];
+      //   const To_t& to_vertex = to_acc[edge.to];
+      //   std::apply(
+      //       [&](auto... ex) {
+      //         std::apply([&](auto&... ap) { ((apply_acc[i] = ex.apply(edge, from_vertex, to_vertex)), ...); },
+      //                    apply_acc);
+      //       },
+      //       extractors);
+      // });
     });
   }
 
@@ -113,7 +113,7 @@ namespace Sycl_Graph::Sycl {
     return predicate_sort<is_edge_of_extractor>(t);
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Sycl_Graph::Invariant::Property_Extractor_type... Es>
   auto extractor_apply(Graph_t& graph, const std::tuple<Es...>& extractors,
                        std::tuple<sycl::buffer<typename Es::Property_t>...>& apply_buf,
                        sycl::queue& q) {
@@ -142,7 +142,7 @@ namespace Sycl_Graph::Sycl {
     return apply_events;
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Sycl_Graph::Invariant::Property_Extractor_type... Es>
   auto extractor_accumulate(
       Graph_t& graph, const std::tuple<Es...>& extractors,
       std::tuple<sycl::buffer<typename Es::Property_t>...>& apply_buf,
@@ -159,7 +159,7 @@ namespace Sycl_Graph::Sycl {
         edge_sorted_pack);
     return accumulate_events;
   }
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Sycl_Graph::Invariant::Property_Extractor_type... Es>
   std::tuple<sycl::buffer<typename Es::Property_t>...> construct_apply_buffers(
       Graph_t& graph, const std::tuple<Es...>& extractors) {
     auto edge_sizes = std::apply(
@@ -177,7 +177,7 @@ namespace Sycl_Graph::Sycl {
     return bufs;
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Sycl_Graph::Invariant::Property_Extractor_type... Es>
   std::tuple<sycl::buffer<typename Es::Accumulation_Property_t>...> construct_accumulation_buffers(
       Graph_t& graph, const std::tuple<Es...>& extractors) {
     auto edge_sizes = std::apply(
@@ -198,7 +198,7 @@ namespace Sycl_Graph::Sycl {
     return bufs;
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t, Sycl_Graph::Invariant::Property_Extractor_type... Es>
   std::tuple<std::vector<typename Es::Accumulation_Property_t>...> extract_properties(
       Graph_t& graph, const std::tuple<Es...>& extractors, sycl::queue& q) {
     std::tuple<sycl::buffer<typename Es::Property_t>...> apply_buffers
@@ -221,8 +221,6 @@ namespace Sycl_Graph::Sycl {
     return {};
   }
 
-  template <typename T>
-  concept Property_Extractor_type = Sycl_Graph::Invariant::Property_Extractor_type<T>;
 
 }  // namespace Sycl_Graph::Sycl
 #endif

@@ -14,8 +14,12 @@ struct Edge_Accessor {
                 sycl::property_list props = {})
       : ids(id_buf, h, props), data(data_buf, h, props) {}
 
-  Edge_t operator[](std::size_t i){
-    return Edge_t(ids[i], data[i]);}
+  Edge_t operator[](std::size_t i) const{
+    return Edge_t(data[i], ids[i]);}
+
+  Edge_t operator[](sycl::id<1> i) const
+  {
+    return Edge_t(data[i], ids[i]);}
   sycl::accessor<Connection_IDs, 1, Mode> ids;
   sycl::accessor<Data_t, 1, Mode> data;
   std::size_t size() const { return ids.size(); }

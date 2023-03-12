@@ -4,7 +4,7 @@
 #include <Sycl_Graph/Graph/Base/Graph.hpp>
 #include <Sycl_Graph/Buffer/Invariant/Edge_Buffer.hpp>
 #include <Sycl_Graph/Buffer/Invariant/Vertex_Buffer.hpp>
-namespace Sycl_Graph::Sycl::Invariant
+namespace Sycl_Graph::Invariant
 {
 
 

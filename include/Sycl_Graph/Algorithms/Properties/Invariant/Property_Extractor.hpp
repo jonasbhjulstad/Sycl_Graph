@@ -1,6 +1,7 @@
 #ifndef SYCL_GRAPH_ALGORITHMS_PROPERTIES_INVARIANT_PROPERTY_EXTRACTOR_HPP
 #define SYCL_GRAPH_ALGORITHMS_PROPERTIES_INVARIANT_PROPERTY_EXTRACTOR_HPP
 #include <Sycl_Graph/Graph/Invariant/Graph.hpp>
+#include <concepts>
 namespace Sycl_Graph::Invariant {
 
 template <typename T>

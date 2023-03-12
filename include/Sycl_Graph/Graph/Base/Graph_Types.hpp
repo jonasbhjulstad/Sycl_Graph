@@ -8,6 +8,7 @@
 #include <Sycl_Graph/type_helpers.hpp>
 #include <Sycl_Graph/Math/math.hpp>
 #include <ostream>
+#include <concepts>
 namespace Sycl_Graph::Base
 {
 
@@ -64,6 +65,8 @@ namespace Sycl_Graph::Base
         typedef typename Connection_IDs::ID_t ID_t;
         static constexpr auto invalid_id = Connection_IDs::invalid_id;
         Data_t data = Data_t{};
+
+        Edge(const D& data, Connection_IDs ids): data(data), ids(ids) {}
         Edge(const D &data, ID_t to, ID_t from)
             : data(data), ids{to, from} {}
         Edge(ID_t to, ID_t from)

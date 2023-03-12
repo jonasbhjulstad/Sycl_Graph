@@ -23,6 +23,7 @@
 #include <Sycl_Graph/Buffer/Sycl/Invariant/Vertex_Buffer.hpp>
 #include <Sycl_Graph/Graph/Invariant/Graph.hpp>
 #include <type_traits>
+#include <concepts>
 namespace Sycl_Graph::Sycl::Invariant
 {
 
