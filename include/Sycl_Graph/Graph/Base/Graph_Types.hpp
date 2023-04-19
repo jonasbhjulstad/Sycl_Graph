@@ -43,8 +43,8 @@ namespace Sycl_Graph::Base
     struct Connection_ID_Pair
     {
         typedef _ID_t ID_t;
-        _ID_t to = invalid_id;
         _ID_t from = invalid_id;
+        _ID_t to = invalid_id;
         static constexpr ID_t invalid_id = _invalid_id;
 
         bool is_valid() const
@@ -67,14 +67,13 @@ namespace Sycl_Graph::Base
         Data_t data = Data_t{};
 
         Edge(const D& data, Connection_IDs ids): data(data), ids(ids) {}
-        Edge(const D &data, ID_t to, ID_t from)
-            : data(data), ids{to, from} {}
-        Edge(ID_t to, ID_t from)
-            : ids{to, from} {}
+        Edge(const D &data, ID_t from, ID_t to)
+            : data(data), ids{from, to} {}
+        Edge(ID_t from, ID_t to)
+            : ids{from, to} {}
         Connection_IDs ids;
-
-        ID_t& to = ids.to;
         ID_t& from = ids.from;
+        ID_t& to = ids.to;
     };
 
 

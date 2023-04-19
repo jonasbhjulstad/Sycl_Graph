@@ -19,19 +19,12 @@ namespace Sycl_Graph::Sycl {
     using To_t = typename Edge_t::To_t;
     return q.submit([&](sycl::handler& h) {
       auto apply_acc = apply_buf.template get_access<sycl::access::mode::write>(h);
-      // auto to_acc = graph.template get_access<sycl::access::mode::read, To_t>(h);
-      // auto from_acc = graph.template get_access<sycl::access::mode::read, From_t>(h);
       auto edge_acc = graph.template get_access<sycl::access::mode::read, Edge_t>(h);
-      // auto apply_acc = std::apply(
-      //     [&](auto&... apply_buf) {
-      //       return std::make_tuple(apply_buf.template
-      //       get_access<sycl::access::mode::write>(h)...);
-      //     },
-      //     apply_bufs);
-
+      auto from_acc = graph.template get_access<sycl::access::mode::read, From_t>(h);
+      auto to_acc = graph.template get_access<sycl::access::mode::read, To_t>(h);
       h.parallel_for(edge_acc.size(), [=](sycl::id<1> i) {
-        const Edge_t edge = edge_acc[i];
-        apply_acc[i] = extractor.apply(edge);
+        const Edge_t& edge = edge_acc[i];
+        apply_acc[i] = extractor.apply(edge, from_acc[edge.from], to_acc[edge.to]);
       });
     });
   }

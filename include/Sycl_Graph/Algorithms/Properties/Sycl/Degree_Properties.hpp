@@ -1,5 +1,6 @@
 #ifndef SYCL_GRAPH_ALGORITHMS_PROPERTIES_SYCL_DEGREE_PROPERTIES_HPP
 #define SYCL_GRAPH_ALGORITHMS_PROPERTIES_SYCL_DEGREE_PROPERTIES_HPP
+#include <concepts>
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Algorithms/Properties/Sycl/Property_Extractor.hpp>
 #include <Sycl_Graph/Buffer/Invariant/Buffer.hpp>
@@ -25,13 +26,28 @@ namespace Sycl_Graph::Sycl {
                          const Vertex_Buffer_To_t& vertex_buffer_to,
                          const Edge_Buffer_t& edge_buffer){}
 
-    virtual Apply_t apply(const Edge_t& edge, const From_t& data_from, const To_t& data_to) const = 0;
-    virtual Accumulate_t accumulate(
+    Apply_t apply(const Edge_t& edge, const From_t& data_from, const To_t& data_to) const = 0;
+    Accumulate_t accumulate(
         const sycl::accessor<Apply_t, 1, sycl::access::mode::read>& apply_acc,
         const sycl::accessor<Accumulate_t, 1, sycl::access::mode::read_write>& accumulate_acc,
         uint32_t idx) const
-        = 0;
+        {
+        }
   };
+
+
+  template <typename T>
+  concept Undirected_Extractor_type = 
+  std::is_member_function_pointer_v<decltype(&T::accumulate)> &&
+  requires(typename T::Edge_t edge, typename T::From_t data_from, typename T::To_t data_to)
+            {
+              T::Vertex_Buffer_To_t;
+              T::Vertex_Buffer_From_t;
+              T::Edge_Buffer_t;
+              T::Apply_t;
+              T::Accumulate_t;
+              T::apply(edge, data_from, data_to);
+            };
 
   template <Sycl_Graph::Base::Vertex_Buffer_type From, Sycl_Graph::Base::Vertex_Buffer_type To>
   struct Degree_Apply_t {
@@ -54,20 +70,19 @@ namespace Sycl_Graph::Sycl {
   template <Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_From_t,
             Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_To_t,
             Sycl_Graph::Base::Edge_Buffer_type _Edge_Buffer_t>
-  struct Degree_Extractor : public Undirected_Extractor<
-                                _Vertex_Buffer_From_t, _Vertex_Buffer_To_t, _Edge_Buffer_t,
-                                Degree_Apply_t<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t>,
-                                Degree_Accumulate_t<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t>> {
-    using Base_t
-        = Undirected_Extractor<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t, _Edge_Buffer_t,
-                               Degree_Apply_t<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t>,
-                               Degree_Accumulate_t<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t>>;
-    using Base_t::Base_t;
-    using typename Base_t::Accumulate_t;
-    using typename Base_t::Apply_t;
-    using typename Base_t::Edge_t;
-    using typename Base_t::From_t;
-    using typename Base_t::To_t;
+  struct Degree_Extractor
+  {
+    typedef Degree_Accumulate_t<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t> Accumulate_t;
+    typedef Degree_Apply_t<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t> Apply_t;
+    typedef typename _Edge_Buffer_t::Edge_t Edge_t;
+    typedef typename _Vertex_Buffer_From_t::Data_t From_t;
+    typedef typename _Vertex_Buffer_To_t::Data_t To_t;
+
+    Degree_Extractor() = default;
+    Degree_Extractor(const _Vertex_Buffer_From_t& vertex_buffer_from,
+                     const _Vertex_Buffer_To_t& vertex_buffer_to,
+                     const _Edge_Buffer_t& edge_buffer) {}
+
 
     Apply_t apply(const Edge_t& edge, const From_t& from, const To_t& to) const {
       return {edge.from, edge.to};

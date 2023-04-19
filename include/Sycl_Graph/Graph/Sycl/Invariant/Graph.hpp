@@ -71,13 +71,11 @@ namespace Sycl_Graph::Sycl::Invariant
       static_assert(Vertex_Buffer_t::template is_Vertex_type<T> || Edge_Buffer_t::template is_Edge_type<T>, "Type is not a vertex or edge type");
       if constexpr (Vertex_Buffer_t::template is_Vertex_type<T>)
       {
-        auto acc = this->vertex_buf.template get_access<Mode, T, D>(h);
-        // static_assert(std::is_same_v<typename decltype(acc)::Vertex_t, T>, "Vertex type mismatch");
+        return this->vertex_buf.template get_access<Mode, T, D>(h);
       }
       else
       {
-        auto acc = this->edge_buf.template get_access<Mode, T, D>(h);
-        // static_assert(std::is_same_v<typename decltype(acc)::Edge_t, T>, "Edge type mismatch");
+        return this->edge_buf.template get_access<Mode, T, D>(h);
       }
     }
 

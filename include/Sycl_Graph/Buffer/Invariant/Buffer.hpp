@@ -37,8 +37,7 @@
         template <typename D> requires Data_type<D>
         auto get_buffer() const 
         {
-            constexpr uI_t idx = get_buffer_index<D>()[0];
-            return std::get<idx>(buffers);
+            return std::get<D>(buffers);
         }
         template <typename ... Ds> requires (Data_type<Ds> && ...)
         auto get_buffers() const

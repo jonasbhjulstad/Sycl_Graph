@@ -95,6 +95,8 @@ namespace Sycl_Graph::Sycl::Base
         template <typename D>
         auto& get_buffer()
         {
+            static_assert((std::is_same_v<D, Ds> || ...), "Buffer does not contain type D");
+            std::cout << "getting buffer of type " << typeid(D).name() << std::endl;
             return std::get<sycl::buffer<D, 1>>(bufs);
         }
 

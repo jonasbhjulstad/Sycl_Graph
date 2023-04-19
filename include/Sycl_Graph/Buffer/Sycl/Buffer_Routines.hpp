@@ -5,13 +5,13 @@
 #include <vector>
 #include <algorithm>
 #include <tuple>
-#include <oneapi/dpl/iterator>
-#include <oneapi/dpl/algorithm>
-#include <oneapi/dpl/ranges>
+// #include <oneapi/dpl/iterator>
+// #include <oneapi/dpl/algorithm>
+// #include <oneapi/dpl/ranges>
 #include <iostream>
 namespace Sycl_Graph
 {
-  using namespace oneapi::dpl::experimental;
+  // using namespace oneapi::dpl::experimental;
 
   template <typename T>
   void buffer_print(sycl::buffer<T, 1> &buf, sycl::queue &q, const std::string &name = "")
@@ -376,12 +376,12 @@ namespace Sycl_Graph
     (buffer_remove(std::get<sycl::buffer<Ts, 1>>(bufs), q, offset, size), ...);
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
-  void buffer_remove(sycl::buffer<T, 1> &buf, sycl::queue &q, auto condition)
-  {
-    auto buf_view = ranges::all_view<T, sycl::access::mode::read_write>(buf);
-    ranges::remove_if(oneapi::dpl::execution::dpcpp_default, buf_view, condition);
-  }
+  // template <typename T, std::unsigned_integral uI_t = uint32_t>
+  // void buffer_remove(sycl::buffer<T, 1> &buf, sycl::queue &q, auto condition)
+  // {
+  //   auto buf_view = ranges::all_view<T, sycl::access::mode::read_write>(buf);
+  //   ranges::remove_if(oneapi::dpl::execution::dpcpp_default, buf_view, condition);
+  // }
 
   template <std::unsigned_integral uI_t, typename ... Ts>
   void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, const std::vector<uI_t>& indices, uI_t N_max = std::numeric_limits<uI_t>::max())
