@@ -38,19 +38,19 @@ int main()
     std::cout << "Graph has " << graph.N_vertices() << " vertices and " << graph.N_edges() << " edges." << std::endl;
 
 
-    Sycl_Graph::Sycl::Degree_Extractor i_f_extractor_in(fv_buf, i_f_e_buf, Sycl_Graph::Sycl::Degree_Property::In_Degree);
-    Sycl_Graph::Sycl::Degree_Extractor i_f_extractor_out(fv_buf, i_f_e_buf, Sycl_Graph::Sycl::Degree_Property::Out_Degree);
+    Sycl_Graph::Sycl::Degree_Extractor i_f_extractor(iv_buf, fv_buf, i_f_e_buf);
+    Sycl_Graph::Sycl::Degree_Extractor f_i_extractor(fv_buf, iv_buf, f_i_e_buf);
 
-    Sycl_Graph::Sycl::Degree_Extractor f_i_extractor_in(iv_buf, f_i_e_buf, Sycl_Graph::Sycl::Degree_Property::In_Degree);
-    Sycl_Graph::Sycl::Degree_Extractor f_i_extractor_out(iv_buf, f_i_e_buf, Sycl_Graph::Sycl::Degree_Property::Out_Degree);
 
-    auto extractors = std::make_tuple(i_f_extractor_in, i_f_extractor_out, f_i_extractor_in, f_i_extractor_out);
+    // auto extractors = std::make_tuple(i_f_extractor_in, i_f_extractor_out);//, f_i_extractor_in, f_i_extractor_out);
+    auto extractors = std::make_tuple(i_f_extractor, f_i_extractor);//, f_i_extractor_in, f_i_extractor_out);
 
     auto properties = Sycl_Graph::Sycl::extract_properties(graph, extractors, q);
 
+    std::cout << "Degrees:" << std::endl;
     auto printvecpair = [&](const auto& vec) {
         for (const auto& v : vec) {
-            std::cout << v.first << " " << v.second << std::endl;
+            std::cout << "From " << v.from.id << ": " << v.from.degree << ", To " << v.to.id << ": " << v.to.degree << std::endl;
         }
         std::cout << std::endl;
     };

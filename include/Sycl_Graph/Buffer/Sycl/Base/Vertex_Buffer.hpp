@@ -93,6 +93,20 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
     return Vertex_Accessor<Vertex_t, Mode>(id_buf, data_buf, h);
   }
 
+  template <sycl::access_mode Mode = sycl::access_mode::read>
+  auto get_id_access(sycl::handler& h) 
+  {
+    auto& id_buf = this->template get_buffer<ID_t>();
+    return id_buf.template get_access<Mode>(h);
+  }
+
+  template <sycl::access_mode Mode>
+  auto get_data_access(sycl::handler& h)
+  {
+    auto& data_buf = this->template get<Data_t, Mode>();
+    return data_buf.template get_access<Mode>(h);
+  }
+
   void remove(const std::vector<ID_t> &ids) {
     this->template remove_elements<ID_t>(ids);
   }

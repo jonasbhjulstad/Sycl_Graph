@@ -174,21 +174,15 @@ namespace Sycl_Graph
     }
   }
 
+
   template <typename T, std::unsigned_integral uI_t = uint32_t>
-  std::vector<T> buffer_get(sycl::buffer<T, 1> &buf, sycl::queue &q,
-                            uI_t offset = 0, uI_t size = 0)
+  std::vector<T> buffer_get(sycl::buffer<T, 1> &buf)
   {
-    if (size == 0)
+    auto buf_acc = buf.get_host_access();
+    std::vector<T> res(buf.size());
+    for(int i = 0; i < buf.size(); ++i)
     {
-      size = buf.size();
-    }
-    std::vector<T> res(size);
-    sycl::buffer<T, 1> res_buf(res.data(), sycl::range<1>(size));
-    if constexpr (sizeof(T) > 0)
-    {
-      auto view = ranges::all_view<T, sycl::access::mode::read>(buf);
-      auto res_view = ranges::all_view<T, sycl::access::mode::write>(res_buf);
-      ranges::copy(oneapi::dpl::execution::dpcpp_default, view, res_view);
+      res[i] = buf_acc[i];
     }
     return res;
   }

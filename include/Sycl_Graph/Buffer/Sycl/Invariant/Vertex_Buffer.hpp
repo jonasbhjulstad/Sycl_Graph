@@ -2,14 +2,14 @@
 #define SYCL_GRAPH_SYCL_INVARIANT_VERTEX_BUFFER_HPP
 #include <concepts>
 #include <Sycl_Graph/type_helpers.hpp>
-#include <Sycl_Graph/Buffer/Invariant/Buffer.hpp>
+#include <Sycl_Graph/Buffer/Sycl/Invariant/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Base/Vertex_Buffer.hpp>
 
 namespace Sycl_Graph::Sycl::Invariant
 {
 
 
-    template <Sycl_Graph::Sycl::Base::Vertex_Buffer_type... VBs>
+    template <Base::Vertex_Buffer_type... VBs>
     struct Vertex_Buffer : public Buffer<VBs...>
     {
         typedef typename std::tuple_element_t<0, std::tuple<VBs...>>::uI_t uI_t;

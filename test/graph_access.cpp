@@ -34,5 +34,7 @@ int main()
 
     std::cout << "Graph has " << graph.N_vertices() << " vertices and " << graph.N_edges() << " edges." << std::endl;
 
+    auto i_f_acc = graph.template get_access<()
+
     return 0;
 }

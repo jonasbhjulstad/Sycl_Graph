@@ -1,5 +1,5 @@
-#ifndef SYCL_GRAPH_BUFFER_SYCL_BUFFER_HPP
-#define SYCL_GRAPH_BUFFER_SYCL_BUFFER_HPP
+#ifndef SYCL_GRAPH_BUFFER_SYCL_BASE_BUFFER_HPP
+#define SYCL_GRAPH_BUFFER_SYCL_BASE_BUFFER_HPP
 #include <Sycl_Graph/Buffer/Base/Buffer.hpp>
 #include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
@@ -90,6 +90,12 @@ namespace Sycl_Graph::Sycl::Base
         auto get_buffers() const
         {
             return bufs;
+        }
+
+        template <typename D>
+        auto& get_buffer()
+        {
+            return std::get<sycl::buffer<D, 1>>(bufs);
         }
 
         void resize(uI_t new_size)

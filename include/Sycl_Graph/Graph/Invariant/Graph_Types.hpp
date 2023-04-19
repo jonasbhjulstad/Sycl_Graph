@@ -12,7 +12,7 @@ namespace Sycl_Graph::Invariant
     template <typename T>
     concept Vertex_type = Sycl_Graph::Base::Vertex_type<T>;
 
-    template <Sycl_Graph::Base::Edge_type E, Vertex_type _To, Vertex_type _From>
+    template <Sycl_Graph::Base::Edge_type E, Vertex_type _From, Vertex_type _To>
     struct Edge: public E
     {
 

@@ -1,5 +1,6 @@
 #ifndef SYCL_GRAPH_BUFFER_SYCL_INVARIANT_BUFFER_HPP
 #define SYCL_GRAPH_BUFFER_SYCL_INVARIANT_BUFFER_HPP
+#include <CL/sycl.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Base/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Invariant/Buffer.hpp>
 

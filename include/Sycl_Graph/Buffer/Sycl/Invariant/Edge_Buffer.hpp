@@ -2,11 +2,14 @@
 #define SYCL_GRAPH_SYCL_INVARIANT_EDGE_BUFFER_HPP
 #include <Sycl_Graph/type_helpers.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Invariant/Buffer.hpp>
+#include <Sycl_Graph/Buffer/Sycl/Base/Edge_Buffer.hpp>
 
 namespace Sycl_Graph::Sycl::Invariant
 {    
-    
-    template <Sycl_Graph::Sycl::Base::Edge_Buffer_type... EBs>
+
+
+
+    template <Base::Edge_Buffer_type ... EBs>
     struct Edge_Buffer: public Buffer<EBs...>
     {
         typedef Buffer<EBs...> Base_t;

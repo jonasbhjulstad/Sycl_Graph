@@ -98,6 +98,7 @@ namespace Sycl_Graph::Invariant
         {
             return std::make_tuple((get_buffer<VBs>().get_vertices(), ...));
         }
+
     };
 
     template <typename T>

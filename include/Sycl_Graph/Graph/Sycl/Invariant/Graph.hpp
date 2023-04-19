@@ -68,17 +68,16 @@ namespace Sycl_Graph::Sycl::Invariant
     template <sycl::access_mode Mode, typename T, typename D = void>
     auto get_access(sycl::handler &h)
     {
+      static_assert(Vertex_Buffer_t::template is_Vertex_type<T> || Edge_Buffer_t::template is_Edge_type<T>, "Type is not a vertex or edge type");
       if constexpr (Vertex_Buffer_t::template is_Vertex_type<T>)
       {
-          return this->vertex_buf.template get_access<Mode, T, D>(h);
-      }
-      else if constexpr (Edge_Buffer_t::template is_Edge_type<T>)
-      {
-        return this->edge_buf.template get_access<Mode, T, D>(h);
+        auto acc = this->vertex_buf.template get_access<Mode, T, D>(h);
+        // static_assert(std::is_same_v<typename decltype(acc)::Vertex_t, T>, "Vertex type mismatch");
       }
       else
       {
-        static_assert(Vertex_Buffer_t::template is_Vertex_type<T> || Edge_Buffer_t::template is_Edge_type<T>, "Type is not a vertex or edge type");
+        auto acc = this->edge_buf.template get_access<Mode, T, D>(h);
+        // static_assert(std::is_same_v<typename decltype(acc)::Edge_t, T>, "Edge type mismatch");
       }
     }
 
