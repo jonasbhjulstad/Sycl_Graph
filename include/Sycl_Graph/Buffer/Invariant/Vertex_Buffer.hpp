@@ -41,7 +41,6 @@ namespace Sycl_Graph::Invariant
         template <typename V>
         void add(const std::vector<uI_t> &&ids, const std::vector<V> &&data)
         {
-            // create vector of vertices
             std::vector<V> vertices(ids.size());
             vertices.reserve(ids.size());
             std::transform(ids.begin(), ids.end(), data.begin(), vertices.begin(), [](auto &&id, auto &&data)

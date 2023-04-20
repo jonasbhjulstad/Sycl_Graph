@@ -34,7 +34,8 @@ int main()
 
     std::cout << "Graph has " << graph.N_vertices() << " vertices and " << graph.N_edges() << " edges." << std::endl;
 
-    auto i_f_acc = graph.template get_access<()
+    auto& i_f_e_buf_ref = graph.edge_buf.get_edges<decltype(i_f_e_buf)>();
+    static_assert(std::is_same<decltype(i_f_e_buf_ref), decltype(i_f_e_buf)>::value);
 
     return 0;
 }

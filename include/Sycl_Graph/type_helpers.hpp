@@ -17,6 +17,8 @@ namespace Sycl_Graph {
 
   template <typename T, typename First, typename... Rest> constexpr auto index_of_type() {
     if constexpr (sizeof...(Rest) == 0)
+      return -1;
+    else if constexpr(std::is_same_v<T, First>)
       return 0;
     else
       return 1 + index_of_type<T, Rest...>();

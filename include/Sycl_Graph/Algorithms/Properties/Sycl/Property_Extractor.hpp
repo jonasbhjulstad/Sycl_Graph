@@ -17,6 +17,9 @@ namespace Sycl_Graph::Sycl {
     using Edge_t = typename Es::Edge_t;
     using From_t = typename Edge_t::From_t;
     using To_t = typename Edge_t::To_t;
+    auto& bufs = graph.edge_buf.buffers;
+    using Buf_t = decltype(std::get<0>(bufs));
+    // std::cout << "buf_0: " << typeid(std::get<0>(bufs)).name() << ", buf_1: " << typeid(std::get<1>(bufs)).name() << ", buf_2: " << typeid(std::get<2>(bufs)).name() << std::endl;
     return q.submit([&](sycl::handler& h) {
       auto apply_acc = apply_buf.template get_access<sycl::access::mode::write>(h);
       auto edge_acc = graph.template get_access<sycl::access::mode::read, Edge_t>(h);

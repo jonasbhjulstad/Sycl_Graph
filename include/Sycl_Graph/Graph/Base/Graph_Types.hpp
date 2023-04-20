@@ -27,7 +27,6 @@ namespace Sycl_Graph::Base
         {
             return id != invalid_id;
         }
-
     };
 
     template <typename T>
@@ -71,6 +70,7 @@ namespace Sycl_Graph::Base
             : data(data), ids{from, to} {}
         Edge(ID_t from, ID_t to)
             : ids{from, to} {}
+        Edge() = default;
         Connection_IDs ids;
         ID_t& from = ids.from;
         ID_t& to = ids.to;

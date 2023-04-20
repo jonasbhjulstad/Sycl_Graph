@@ -37,12 +37,13 @@
         template <typename D> requires Data_type<D>
         auto get_buffer() const 
         {
-            return std::get<D>(buffers);
+            constexpr uI_t index = get_buffer_index<D>()[0];
+            return std::get<index>(buffers);
         }
         template <typename ... Ds> requires (Data_type<Ds> && ...)
         auto get_buffers() const
         {
-            return std::make_tuple(get_buffer<get_buffer_index<Ds>>() ...);
+            return std::make_tuple(get_buffer<Ds>() ...);
         }
 
         auto get_buffers() const

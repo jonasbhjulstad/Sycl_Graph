@@ -51,11 +51,11 @@ int main()
 
 
     Sycl_Graph::Sycl::Degree_Extractor i_f_extractor(iv_buf, fv_buf, i_f_e_buf);
-    Sycl_Graph::Sycl::Degree_Extractor f_i_extractor(fv_buf, iv_buf, f_i_e_buf);
+    // Sycl_Graph::Sycl::Degree_Extractor f_i_extractor(fv_buf, iv_buf, f_i_e_buf);
 
 
     // auto extractors = std::make_tuple(i_f_extractor_in, i_f_extractor_out);//, f_i_extractor_in, f_i_extractor_out);
-    auto extractors = std::make_tuple(i_f_extractor, f_i_extractor);//, f_i_extractor_in, f_i_extractor_out);
+    auto extractors = std::make_tuple(i_f_extractor);//, f_i_extractor_in, f_i_extractor_out);
 
     auto properties = Sycl_Graph::Sycl::extract_properties(graph, extractors, q);
 

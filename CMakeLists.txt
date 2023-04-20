@@ -53,6 +53,7 @@ set(SYCL_GRAPH_DOXYGEN_IN ${PROJECT_SOURCE_DIR}/docs_doxygen/Doxyfile.in)
 set(SYCL_GRAPH_DOXYGEN_OUT ${PROJECT_BINARY_DIR}/Doxyfile.out)
 add_subdirectory(test)
 add_compile_options("-fcolor-diagnostics")
+add_compile_options("-v")
 # add_compile_options("-fdiagnostics-format=gcc")
 # ---- Create an installable target ----
 # this allows users to install and find the library via `find_package()`.

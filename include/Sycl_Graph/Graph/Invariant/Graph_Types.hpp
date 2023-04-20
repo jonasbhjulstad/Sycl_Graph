@@ -22,6 +22,7 @@ namespace Sycl_Graph::Invariant
         typedef _To To_t;
         Edge(const typename E::Data_t& data, const typename E::Connection_IDs ids): E(data, ids) {}
         Edge(typename E::ID_t from, typename E::ID_t to): E(from, to) {}
+        Edge() = default;
         
     };
 
