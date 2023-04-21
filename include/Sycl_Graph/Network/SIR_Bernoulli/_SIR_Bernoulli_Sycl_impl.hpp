@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Network/Network.hpp>
-#include <Sycl_Graph/Graph/Sycl/Invariant/Graph.hpp>
+#include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
 #include <Static_RNG/distributions.hpp>
 #include <utility>
 #include <type_traits>

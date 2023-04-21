@@ -2,39 +2,35 @@
 #define SYCL_GRAPH_SYCL_EDGE_BUFFER_HPP
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
-#include <Sycl_Graph/Buffer/Sycl/Base/Buffer.hpp>
+#include <Sycl_Graph/Buffer/Sycl/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Base/Edge_Buffer.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
-namespace Sycl_Graph::Sycl::Base {
-template <Sycl_Graph::Base::Edge_type Edge_t, sycl::access::mode Mode>
-struct Edge_Accessor {
-  typedef typename Edge_t::Data_t Data_t;
+namespace Sycl_Graph::Sycl {
+template <sycl::access::mode Mode, Sycl_Graph::Edge_type Edge_t>
+struct Edge_Accessor: public Buffer_Accessor<Mode, typename Edge_t::Connection_IDs, typename Edge_t::Data_t>
+{
+  typedef Buffer_Accessor<Mode, typename Edge_t::Connection_IDs, typename Edge_t::Data_t> Base_t;
   typedef typename Edge_t::Connection_IDs Connection_IDs;
-  Edge_Accessor(sycl::buffer<typename Edge_t::Connection_IDs, 1> &id_buf, sycl::buffer<typename Edge_t::Data_t, 1>& data_buf, sycl::handler &h,
-                sycl::property_list props = {})
-      : ids(id_buf, h, props), data(data_buf, h, props) {}
-
-  Edge_t operator[](std::size_t i) const{
-    return Edge_t(data[i], ids[i]);}
-
-  Edge_t operator[](sycl::id<1> i) const
+  typedef typename Edge_t::Data_t Data_t;
+  Edge_Accessor(Base_t&& base): Base_t(base){}
+  sycl::accessor<Connection_IDs, 1, Mode> & ids = std::get<0>(this->accessors);
+  sycl::accessor<Data_t, 1, Mode>& data = std::get<1>(this->accessors);
+  Edge_t operator[](sycl::id<1> idx) const
   {
-    return Edge_t(data[i], ids[i]);}
-  sycl::accessor<Connection_IDs, 1, Mode> ids;
-  sycl::accessor<Data_t, 1, Mode> data;
-  std::size_t size() const { return ids.size(); }
+    auto [ids, data] = Base_t::operator[](idx);
+    return Edge_t(ids, data);
+  }
 };
 
-template <Sycl_Graph::Base::Edge_type _Edge_t, std::unsigned_integral _uI_t = uint32_t> 
+template <Sycl_Graph::Edge_type _Edge_t, std::unsigned_integral _uI_t = uint32_t> 
 struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typename _Edge_t::Data_t>
  {
   typedef _Edge_t Edge_t;
+  typedef Buffer<_uI_t, typename _Edge_t::Connection_IDs, typename _Edge_t::Data_t> Base_t;
+  typedef typename Base_t::Data_t Data_t;
   typedef typename Edge_t::ID_t ID_t;
-  typedef Edge_t Data_t;
-  typedef typename Edge_t::Data_t Edge_Data_t;
   typedef typename Edge_t::Connection_IDs Connection_IDs;
   typedef _uI_t uI_t;
-  typedef Buffer<_uI_t, Connection_IDs, Edge_Data_t> Base_t;
 
   sycl::queue& q = Base_t::q;
   Edge_Buffer(sycl::queue &q, uI_t NE = 1, const sycl::property_list &props = {}): Base_t(q, NE, props){}
@@ -57,7 +53,7 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
   void add(const std::vector<Edge_t>& edges)
   {
       std::vector<Connection_IDs> ids;
-      std::vector<Edge_Data_t> data;
+      std::vector<typename Edge_t::Data_t> data;
       data.reserve(edges.size());
       ids.reserve(edges.size());
       for (const auto& e: edges)
@@ -68,12 +64,6 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
       this->template assign_add<Connection_IDs>(ids, data);
   }
 
-  template <sycl::access_mode Mode>
-  Edge_Accessor<Edge_t, Mode> get_access(sycl::handler& h)
-  {
-    auto [id_buf, data_buf] = this->get_buffers();
-    return Edge_Accessor<Edge_t, Mode>(id_buf, data_buf, h);
-  }
 
   std::vector<Edge_t> get_edges()
   {
@@ -92,10 +82,16 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
     this->template remove_elements<Connection_IDs>(ids);
   }
 
+  template <sycl::access_mode Mode>
+  auto get_access(sycl::handler& h)
+  {
+    return Edge_Accessor<Mode, Edge_t>(static_cast<Base_t*>(this)->template get_access<Mode, Connection_IDs, typename Edge_t::Data_t>(h));
+  }
+
 };
 
 template <typename T>
-concept Edge_Buffer_type = Sycl_Graph::Base::Edge_Buffer_type<T>;
+concept Edge_Buffer_type = Sycl_Graph::Edge_Buffer_type<T>;
 } // namespace sycl_graph
 
 #endif // 

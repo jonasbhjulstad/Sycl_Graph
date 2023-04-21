@@ -1,12 +1,12 @@
 #ifndef SYCL_GRAPH_NETWORK_DYNAMIC_NETWORK_TYPES_HPP
 #define SYCL_GRAPH_NETWORK_DYNAMIC_NETWORK_TYPES_HPP
-#include <Sycl_Graph/Graph/Base/Graph_types.hpp>
+#include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
 namespace Sycl_Graph::Network::Dynamics
 {
     template <typename D, typename _ID_t = uint32_t, _ID_t _invalid_id = std::numeric_limits<_ID_t>::max()>
-    using Vertex = Sycl_Graph::Invariant::Vertex<D, _ID_t, _invalid_id>;
+    using Vertex = Sycl_Graph::Vertex<D, _ID_t, _invalid_id>;
 
-    template <Sycl_Graph::Invariant::Vertex_type V, typename _Temporal_Param_t>
+    template <Sycl_Graph::Vertex_type V, typename _Temporal_Param_t>
     struct Node: public V
     {
         typedef _Temporal_Param_t Temporal_Param_t;
@@ -16,7 +16,7 @@ namespace Sycl_Graph::Network::Dynamics
         }
     };
 
-    template <Sycl_Graph::Invariant::Edge_type E, typename _Temporal_Param_t, typename Derived>
+    template <Sycl_Graph::Edge_type E, typename _Temporal_Param_t, typename Derived>
     struct Link: public E
     {
         typedef _Temporal_Param_t Temporal_Param_t;
@@ -35,14 +35,14 @@ namespace Sycl_Graph::Network::Dynamics
     };
 
     template <typename T>
-    concept Link_type = Sycl_Graph::Invariant::Edge_type<T>;
+    concept Link_type = Sycl_Graph::Edge_type<T>;
     {
         E::Temporal_Param_t;
         E.advance(tp);
     };
 
     template <typename T>
-    concept Network = Sycl_Graph::Invariant::Graph_type<T> && requires(T& graph)
+    concept Network = Sycl_Graph::Graph_type<T> && requires(T& graph)
     {
         graph.advance(tp);
         graph.read_state(tp);

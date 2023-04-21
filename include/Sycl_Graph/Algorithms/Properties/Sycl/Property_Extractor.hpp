@@ -2,15 +2,15 @@
 #define SYCL_GRAPH_ALGORITHMS_PROPERTIES_SYCL_PROPERTY_EXTRACTOR_HPP
 
 #include <CL/sycl.hpp>
-#include <Sycl_Graph/Algorithms/Properties/Invariant/Property_Extractor.hpp>
+#include <Sycl_Graph/Algorithms/Properties/Property_Extractor.hpp>
 #include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
-#include <Sycl_Graph/Graph/Sycl/Invariant/Graph.hpp>
+#include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
 #include <tuple>
 
 namespace Sycl_Graph::Sycl {
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t,
-            Sycl_Graph::Invariant::Property_Extractor_type Es>
+  template <Sycl_Graph::Sycl::Graph_type Graph_t,
+            Sycl_Graph::Property_Extractor_type Es>
   sycl::event single_extractor_apply(Graph_t& graph, const Es& extractor,
                                      sycl::buffer<typename Es::Apply_t>& apply_buf,
                                      sycl::queue& q) {
@@ -32,8 +32,8 @@ namespace Sycl_Graph::Sycl {
     });
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t,
-            Sycl_Graph::Invariant::Property_Extractor_type Es>
+  template <Sycl_Graph::Sycl::Graph_type Graph_t,
+            Sycl_Graph::Property_Extractor_type Es>
   sycl::event single_extractor_accumulate(Graph_t& graph, const Es& extractor,
                                           sycl::buffer<typename Es::Apply_t>& apply_buf,
                                           sycl::buffer<typename Es::Accumulate_t>& accumulate_buf,
@@ -67,8 +67,8 @@ namespace Sycl_Graph::Sycl {
     return predicate_sort<is_edge_of_extractor>(t);
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t,
-            Sycl_Graph::Invariant::Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Graph_type Graph_t,
+            Sycl_Graph::Property_Extractor_type... Es>
   auto extractor_apply(Graph_t& graph, const std::tuple<Es...>& extractors,
                        std::tuple<sycl::buffer<typename Es::Apply_t>...>& apply_bufs,
                        sycl::queue& q) {
@@ -83,8 +83,8 @@ namespace Sycl_Graph::Sycl {
         apply_bufs);
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t,
-            Sycl_Graph::Invariant::Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Graph_type Graph_t,
+            Sycl_Graph::Property_Extractor_type... Es>
   auto extractor_accumulate(Graph_t& graph, const std::tuple<Es...>& extractors,
                             std::tuple<sycl::buffer<typename Es::Apply_t>...>& apply_bufs,
                             std::tuple<sycl::buffer<typename Es::Accumulate_t>...>& accumulate_bufs,
@@ -109,8 +109,8 @@ namespace Sycl_Graph::Sycl {
         apply_events);
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t,
-            Sycl_Graph::Invariant::Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Graph_type Graph_t,
+            Sycl_Graph::Property_Extractor_type... Es>
   std::tuple<sycl::buffer<typename Es::Apply_t>...> construct_apply_buffers(
       Graph_t& graph, const std::tuple<Es...>& extractors) {
     auto edge_sizes = std::apply(
@@ -128,8 +128,8 @@ namespace Sycl_Graph::Sycl {
     return bufs;
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t,
-            Sycl_Graph::Invariant::Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Graph_type Graph_t,
+            Sycl_Graph::Property_Extractor_type... Es>
   std::tuple<sycl::buffer<typename Es::Accumulate_t>...> construct_accumulation_buffers(
       Graph_t& graph, const std::tuple<Es...>& extractors) {
     auto edge_sizes = std::apply(
@@ -149,8 +149,8 @@ namespace Sycl_Graph::Sycl {
     return bufs;
   }
 
-  template <Sycl_Graph::Sycl::Invariant::Graph_type Graph_t,
-            Sycl_Graph::Invariant::Property_Extractor_type... Es>
+  template <Sycl_Graph::Sycl::Graph_type Graph_t,
+            Sycl_Graph::Property_Extractor_type... Es>
   std::tuple<std::vector<typename Es::Accumulate_t>...> extract_properties(
       Graph_t& graph, const std::tuple<Es...>& extractors, sycl::queue& q) {
     std::tuple<sycl::buffer<typename Es::Apply_t>...> apply_buffers

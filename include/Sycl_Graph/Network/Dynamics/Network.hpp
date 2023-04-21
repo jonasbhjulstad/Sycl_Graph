@@ -6,7 +6,7 @@
 namespace Sycl_Graph::Network::Dynamic
 {
 #include <Sycl_Graph/Math/math.hpp>
-#include <Sycl_Graph/Graph/Invariant/Graph.hpp>
+#include <Sycl_Graph/Graph/Base/Graph.hpp>
 #include <random>
 #include <stddef.h>
 #include <vector>

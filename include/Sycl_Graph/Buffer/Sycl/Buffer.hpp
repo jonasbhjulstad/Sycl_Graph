@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <tuple>
 #include <algorithm>
-namespace Sycl_Graph::Sycl::Base
+namespace Sycl_Graph::Sycl
 {
 
     template <sycl::access::mode Mode, typename... Ds>
@@ -30,6 +30,11 @@ namespace Sycl_Graph::Sycl::Base
         size_t size() const
         {
             return std::get<0>(accessors).size();
+        }
+
+        std::tuple<Ds...> operator[](sycl::id<1> i) const
+        {
+            return std::apply([&i](auto &...accessors) { return std::make_tuple(accessors[i]...); }, accessors);
         }
 
         template <typename D>
@@ -70,21 +75,29 @@ namespace Sycl_Graph::Sycl::Base
 
         uI_t current_size() const { return curr_size; }
 
-        // template <typename T>
-        // static constexpr bool is_Buffer_Type = std::disjunction_v<std::is_same<T, Bs>...>;
+        template <typename T>
+        static constexpr bool is_Data_type = (std::is_same_v<T, Ds> || ...);
+
+        template <typename ... Ts>
+        static constexpr bool is_Data_types = (is_Data_type<Ts> && ...);
+
+        template <typename T>
+        static constexpr void Data_type_assert()
+        {
+            static_assert(is_Data_type<T>, "Invalid data type");
+        }
+
+        template <typename ... Ts>
+        static constexpr void Data_types_assert()
+        {
+            (Data_type_assert<Ts>(), ...);
+        }
 
         // returns a buffer accessor with only the specified types
-        template <sycl::access::mode Mode, typename... D_subset>
+        template <sycl::access::mode Mode, typename... D_subset> requires is_Data_types<D_subset...>
         auto get_access(sycl::handler &h)
         {   
-            if constexpr((std::is_same_v<D_subset, void> || ...))
-            {
-                return Buffer_Accessor<Mode, Ds ...>::make_accessor(bufs, h);
-            }
-            else
-            {
-                return Buffer_Accessor<Mode, D_subset...>(get_by_types<D_subset ..., Ds ...>(bufs), h);
-            }
+            return Buffer_Accessor<Mode, D_subset...>(std::get<sycl::buffer<D_subset,1>>(bufs) ..., h);
         }
 
         auto get_buffers() const

@@ -1,7 +1,7 @@
 #ifndef SYCL_GRAPH_VERTEX_BUFFER_BASE_HPP
 #define SYCL_GRAPH_VERTEX_BUFFER_BASE_HPP
 #include <Sycl_Graph/Buffer/Base/Buffer.hpp>
-namespace Sycl_Graph::Base
+namespace Sycl_Graph
 {
     template <Vertex_type V, typename Derived>
     struct Vertex_Buffer

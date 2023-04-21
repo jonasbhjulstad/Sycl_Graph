@@ -5,6 +5,17 @@
 #include <type_traits>
 // #include <metal.hpp>
 namespace Sycl_Graph {
+
+  template <typename T, typename Tuple> struct has_type;
+
+  template <typename T> struct has_type<T, std::tuple<>> : std::false_type {};
+
+  template <typename T, typename U, typename... Ts> struct has_type<T, std::tuple<U, Ts...>>
+      : has_type<T, std::tuple<Ts...>> {};
+
+  template <typename T, typename... Ts> struct has_type<T, std::tuple<T, Ts...>> : std::true_type {
+  };
+
   template <class T, class Tuple> struct Tuple_Index;
 
   template <class T, class... Types> struct Tuple_Index<T, std::tuple<T, Types...>> {
@@ -16,10 +27,10 @@ namespace Sycl_Graph {
   };
 
   template <typename T, typename First, typename... Rest> constexpr auto index_of_type() {
-    if constexpr (sizeof...(Rest) == 0)
-      return -1;
-    else if constexpr(std::is_same_v<T, First>)
+    if constexpr (std::is_same_v<T, First>)
       return 0;
+    else if constexpr (sizeof...(Rest) == 0)
+      return -1;
     else
       return 1 + index_of_type<T, Rest...>();
   }
@@ -29,12 +40,8 @@ namespace Sycl_Graph {
     return std::make_tuple(std::get<Ts>(tuple)...);
   }
 
-  template <typename... Types>
-  struct indices_of_types
-  {
-    template <typename ... SubTypes>
-    static constexpr auto get()
-    {
+  template <typename... Types> struct indices_of_types {
+    template <typename... SubTypes> static constexpr auto get() {
       return std::make_tuple(index_of_type<SubTypes, Types...>()...);
     }
   };

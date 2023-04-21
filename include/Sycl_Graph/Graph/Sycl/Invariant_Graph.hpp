@@ -19,19 +19,19 @@
 #include <utility>
 // #include <Sycl_Graph/execution.hpp>
 #include <CL/sycl.hpp>
-#include <Sycl_Graph/Buffer/Sycl/Invariant/Edge_Buffer.hpp>
-#include <Sycl_Graph/Buffer/Sycl/Invariant/Vertex_Buffer.hpp>
-#include <Sycl_Graph/Graph/Invariant/Graph.hpp>
+#include <Sycl_Graph/Buffer/Sycl/Edge_Buffer_Pack.hpp>
+#include <Sycl_Graph/Buffer/Sycl/Vertex_Buffer_Pack.hpp>
+#include <Sycl_Graph/Graph/Base/Graph.hpp>
 #include <type_traits>
 #include <concepts>
-namespace Sycl_Graph::Sycl::Invariant
+namespace Sycl_Graph::Sycl
 {
 
-  template <Sycl_Graph::Sycl::Invariant::Vertex_Buffer_type _Vertex_Buffer, Sycl_Graph::Sycl::Invariant::Edge_Buffer_type _Edge_Buffer>
-  struct Graph : public Sycl_Graph::Invariant::Graph<_Vertex_Buffer, _Edge_Buffer>
+  template <Sycl_Graph::Sycl::Vertex_Buffer_Pack_type _Vertex_Buffer, Sycl_Graph::Sycl::Edge_Buffer_Pack_type _Edge_Buffer>
+  struct Graph : public Sycl_Graph::Graph<_Vertex_Buffer, _Edge_Buffer>
 
   {
-    typedef Sycl_Graph::Invariant::Graph<_Vertex_Buffer, _Edge_Buffer> Base_t;
+    typedef Sycl_Graph::Graph<_Vertex_Buffer, _Edge_Buffer> Base_t;
     typedef _Vertex_Buffer Vertex_Buffer_t;
     typedef _Edge_Buffer Edge_Buffer_t;
     typedef typename Base_t::uI_t uI_t;
@@ -65,17 +65,16 @@ namespace Sycl_Graph::Sycl::Invariant
 
 
 
-    template <sycl::access_mode Mode, typename T, typename D = void>
+    template <sycl::access_mode Mode, typename T>
     auto get_access(sycl::handler &h)
     {
-      static_assert(Vertex_Buffer_t::template is_Vertex_type<T> || Edge_Buffer_t::template is_Edge_type<T>, "Type is not a vertex or edge type");
       if constexpr (Vertex_Buffer_t::template is_Vertex_type<T>)
       {
-        return this->vertex_buf.template get_access<Mode, T, D>(h);
+        return this->vertex_buf.template get_access<Mode, T>(h);
       }
-      else
+      else if constexpr(Edge_Buffer_t::template is_Edge_type<T>)
       {
-        return this->edge_buf.template get_access<Mode, T, D>(h);
+        return this->edge_buf.template get_access<Mode, T>(h);
       }
     }
 

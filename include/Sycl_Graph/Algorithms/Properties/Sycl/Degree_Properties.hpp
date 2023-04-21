@@ -3,13 +3,13 @@
 #include <concepts>
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Algorithms/Properties/Sycl/Property_Extractor.hpp>
-#include <Sycl_Graph/Buffer/Invariant/Buffer.hpp>
+#include <Sycl_Graph/Buffer/Base/Buffer_Pack.hpp>
 namespace Sycl_Graph::Sycl {
   enum Degree_Property { In_Degree, Out_Degree };
 
-  template <Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_From_t,
-            Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_To_t,
-            Sycl_Graph::Base::Edge_Buffer_type _Edge_Buffer_t, typename _Apply_t,
+  template <Sycl_Graph::Vertex_Buffer_type _Vertex_Buffer_From_t,
+            Sycl_Graph::Vertex_Buffer_type _Vertex_Buffer_To_t,
+            Sycl_Graph::Edge_Buffer_type _Edge_Buffer_t, typename _Apply_t,
             typename _Accumulate_t>
   struct Undirected_Extractor {
     typedef _Vertex_Buffer_To_t Vertex_Buffer_To_t;
@@ -49,13 +49,13 @@ namespace Sycl_Graph::Sycl {
               T::apply(edge, data_from, data_to);
             };
 
-  template <Sycl_Graph::Base::Vertex_Buffer_type From, Sycl_Graph::Base::Vertex_Buffer_type To>
+  template <Sycl_Graph::Vertex_Buffer_type From, Sycl_Graph::Vertex_Buffer_type To>
   struct Degree_Apply_t {
     typename From::ID_t from;
     typename To::ID_t to;
   };
 
-  template <Sycl_Graph::Base::Vertex_Buffer_type From, Sycl_Graph::Base::Vertex_Buffer_type To>
+  template <Sycl_Graph::Vertex_Buffer_type From, Sycl_Graph::Vertex_Buffer_type To>
   struct Degree_Accumulate_t {
     struct {
       typename From::ID_t id;
@@ -67,9 +67,9 @@ namespace Sycl_Graph::Sycl {
     } to;
   };
 
-  template <Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_From_t,
-            Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_To_t,
-            Sycl_Graph::Base::Edge_Buffer_type _Edge_Buffer_t>
+  template <Sycl_Graph::Vertex_Buffer_type _Vertex_Buffer_From_t,
+            Sycl_Graph::Vertex_Buffer_type _Vertex_Buffer_To_t,
+            Sycl_Graph::Edge_Buffer_type _Edge_Buffer_t>
   struct Degree_Extractor
   {
     typedef Degree_Accumulate_t<_Vertex_Buffer_From_t, _Vertex_Buffer_To_t> Accumulate_t;
@@ -103,9 +103,9 @@ namespace Sycl_Graph::Sycl {
     }
   };
 
-  template <Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_From_t,
-            Sycl_Graph::Base::Vertex_Buffer_type _Vertex_Buffer_To_t,
-            Sycl_Graph::Base::Edge_Buffer_type _Edge_Buffer_t>
+  template <Sycl_Graph::Vertex_Buffer_type _Vertex_Buffer_From_t,
+            Sycl_Graph::Vertex_Buffer_type _Vertex_Buffer_To_t,
+            Sycl_Graph::Edge_Buffer_type _Edge_Buffer_t>
   Degree_Extractor(const _Vertex_Buffer_From_t&,
                                      const _Vertex_Buffer_To_t&,
                                      const _Edge_Buffer_t&)

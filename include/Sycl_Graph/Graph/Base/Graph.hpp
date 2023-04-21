@@ -3,7 +3,7 @@
 #include <concepts>
 #include <Sycl_Graph/Buffer/Base/Edge_Buffer.hpp>
 #include <Sycl_Graph/Buffer/Base/Vertex_Buffer.hpp>
-namespace Sycl_Graph::Base
+namespace Sycl_Graph
 {
 
 

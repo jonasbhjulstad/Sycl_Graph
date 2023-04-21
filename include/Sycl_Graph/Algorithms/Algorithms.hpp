@@ -1,7 +1,7 @@
 #ifndef SYCL_GRAPH_ALGORITHMS_HPP
 #define SYCL_GRAPH_ALGORITHMS_HPP
 #include <CL/sycl.hpp>
-#include <Sycl_Graph/Graph/Graph_Types.hpp>
+#include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
 namespace Sycl_Graph::Sycl::algorithms
 {
   void bitonic_sort(auto &acc, sycl::handler &h)

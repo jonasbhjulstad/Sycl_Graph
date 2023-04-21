@@ -1,5 +1,5 @@
 #include <Sycl_Graph/Graph/Sycl/Vertex_Buffer.hpp>
-#include <Sycl_Graph/Graph/Sycl/Invariant/Graph.hpp>
+#include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
 #include <Sycl_Graph/Graph/Base/Graph.hpp>
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Math/math.hpp>
