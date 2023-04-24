@@ -7,14 +7,8 @@ namespace Sycl_Graph
 
 
     template <typename T>
-    concept Edge_Buffer_type = requires()
-    {
-        typename T::Edge_t;
-        typename T::uI_t;
-    };
-    // Buffer_type<T> &&
-    // Edge_type<typename T::Edge_t> &&
-    // std::unsigned_integral<typename T::uI_t>;
+    concept Edge_Buffer_type = true;
+
 }
 
 #endif

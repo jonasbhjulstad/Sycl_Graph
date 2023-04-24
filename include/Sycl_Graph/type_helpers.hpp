@@ -22,6 +22,9 @@ namespace Sycl_Graph {
     static const std::size_t value = 0;
   };
 
+  template <class T> struct Tuple_Index<T, std::tuple<>> {
+    static const std::size_t value = 0;
+  };
   template <class T, class U, class... Types> struct Tuple_Index<T, std::tuple<U, Types...>> {
     static const std::size_t value = 1 + Tuple_Index<T, std::tuple<Types...>>::value;
   };

@@ -1,9 +1,5 @@
 #include <Sycl_Graph/Graph/Base/Graph.hpp>
-#include <Sycl_Graph/Buffer/Sycl/Vertex_Buffer_Pack.hpp>
-#include <Sycl_Graph/Buffer/Sycl/Edge_Buffer_Pack.hpp>
 #include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
-#include <Sycl_Graph/Buffer/Base/Edge_Buffer_Pack.hpp>
-#include <Sycl_Graph/Buffer/Base/Vertex_Buffer_Pack.hpp>
 #include <itertools.hpp>
 
 using namespace Sycl_Graph;
@@ -37,8 +33,8 @@ int main()
     Sycl_Graph::Sycl::Edge_Buffer i_f_e_buf(q, i_f_edges);
     Sycl_Graph::Sycl::Edge_Buffer f_i_e_buf(q, f_i_edges);
 
-    Sycl_Graph::Sycl::Vertex_Buffer_Pack vertex_buffer(fv_buf, iv_buf);
-    Sycl_Graph::Sycl::Edge_Buffer_Pack edge_buffer(i_f_e_buf, f_i_e_buf);
+    Sycl_Graph::Sycl::Buffer_Pack vertex_buffer(fv_buf, iv_buf);
+    Sycl_Graph::Sycl::Buffer_Pack edge_buffer(i_f_e_buf, f_i_e_buf);
     Sycl_Graph::Sycl::Graph graph(vertex_buffer, edge_buffer, q);
     q.submit([&](sycl::handler& h)
     {
@@ -47,16 +43,16 @@ int main()
         auto i_f_acc = i_f_e_buf.get_access<sycl::access::mode::read_write>(h);
         static_assert(std::is_same<decltype(i_f_acc[0]), i_f_edge_t>::value);
 
-        auto g_fv_acc = graph.template get_access<sycl::access::mode::read_write, fVertex>(h);
+        auto g_fv_acc = graph.template get_vertex_access<sycl::access::mode::read_write, fVertex>(h);
         static_assert(std::is_same<decltype(g_fv_acc[0]), fVertex>::value);
 
-        auto g_iv_acc = graph.template get_access<sycl::access::mode::read_write, iVertex>(h);
+        auto g_iv_acc = graph.template get_vertex_access<sycl::access::mode::read_write, iVertex>(h);
         static_assert(std::is_same<decltype(g_iv_acc[0]), iVertex>::value);
 
-        auto g_i_f_e_acc = graph.template get_access<sycl::access::mode::read_write, typename decltype(i_f_e_buf)::Edge_t>(h);
+        auto g_i_f_e_acc = graph.template get_edge_access<sycl::access::mode::read_write, typename decltype(i_f_e_buf)::Edge_t>(h);
         static_assert(std::is_same<decltype(g_i_f_e_acc[0]), i_f_edge_t>::value);
 
-        auto g_f_i_e_acc = graph.template get_access<sycl::access::mode::read_write, typename decltype(f_i_e_buf)::Edge_t>(h);
+        auto g_f_i_e_acc = graph.template get_edge_access<sycl::access::mode::read_write, typename decltype(f_i_e_buf)::Edge_t>(h);
         static_assert(std::is_same<decltype(g_f_i_e_acc[0]), f_i_edge_t>::value);
 
 

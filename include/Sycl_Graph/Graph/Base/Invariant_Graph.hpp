@@ -13,24 +13,24 @@ namespace Sycl_Graph
   struct Graph: public Sycl_Graph::Graph<Vertex_Buffer_Pack_t, _Edge_Buffer_Pack_t>
   {
     typedef Sycl_Graph::Graph<Vertex_Buffer_Pack_t, _Edge_Buffer_Pack_t> Base_t;
-    typedef Vertex_Buffer_Pack_t Vertex_Buffer_t;
+    typedef Vertex_Buffer_Pack_t Vertex_Buffer_Pack_t;
     typedef _Edge_Buffer_Pack_t Edge_Buffer_Pack_t;
 
-    typedef typename Vertex_Buffer_t::uI_t uI_t;
-    typedef typename Vertex_Buffer_t::Vertex_t Vertex_t;
-    typedef typename Vertex_Buffer_t::Data_t Vertex_Data_t;
+    typedef typename Vertex_Buffer_t_Pack::uI_t uI_t;
+    typedef typename Vertex_Buffer_t_Pack::Vertex_t Vertex_t;
+    typedef typename Vertex_Buffer_t_Pack::Data_t Vertex_Data_t;
     typedef typename Edge_Buffer_Pack_t::Edge_t Edge_t;
     typedef typename Edge_Buffer_Pack_t::Data_t Edge_Data_t;
     Graph() = default;
-    Graph(const Vertex_Buffer_t &vertex_buffer, const Edge_Buffer_Pack_t &edge_buffer) : Base_t(vertex_buffer, edge_buffer) {}
+    Graph(const Vertex_Buffer_Pack_t &vertex_buffer, const Edge_Buffer_Pack_t &edge_buffer) : Base_t(vertex_buffer, edge_buffer) {}
 
     template <typename T>
     uI_t current_size() const
     {
-      if constexpr (Vertex_Buffer_t::template is_Vertex_type<T>)
-        return this->vertex_buf.template current_size<T>();
-      if constexpr(Edge_Buffer_Pack_t::template is_Edge_type<T>)
-        return this->edge_buf.template current_size<T>();
+      if constexpr (is_Vertex_type<T>)
+        return this->vertex_buf.template current_size<typename T::ID_t, typename T::Data_t>();
+      if constexpr(is_Edge_type<T>)
+        return this->edge_buf.template current_size<typename T::Connection_IDs, typename T::Data_t>();
     }
 
     template <typename T>

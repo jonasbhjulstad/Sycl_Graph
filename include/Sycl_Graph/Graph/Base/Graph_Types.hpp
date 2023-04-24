@@ -29,8 +29,12 @@ namespace Sycl_Graph
         }
     };
 
-    template <typename T>
-    static constexpr bool is_Vertex_type = std::unsigned_integral<typename T::ID_t> && std::is_convertible_v<decltype(std::declval<T>().id), typename T::ID_t> && std::is_convertible_v<decltype(std::declval<T>().data), typename T::Data_t>; 
+
+
+    // template <typename T>
+    // static constexpr bool is_Vertex_type = std::unsigned_integral<typename T::ID_t> && std::is_convertible_v<decltype(std::declval<T>().id), typename T::ID_t> && std::is_convertible_v<decltype(std::declval<T>().data), typename T::Data_t>; 
+
+
 
     template <typename T>
     concept Vertex_type = 
@@ -79,7 +83,18 @@ namespace Sycl_Graph
         Edge() = default;
         ID_t& from = ids.from;
         ID_t& to = ids.to;
+
+        Edge operator=(const Edge &other)
+        {
+            ids = other.ids;
+            data = other.data;
+            from = ids.from;
+            to = ids.to;
+            return *this;
+        }
     };
+
+    
 
 
 

@@ -10,15 +10,17 @@ namespace Sycl_Graph::Sycl {
 template <sycl::access::mode Mode, Sycl_Graph::Vertex_type Vertex_t>
 struct Vertex_Accessor: public Buffer_Accessor<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t>
 {
-  typedef Buffer_Accessor<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t> Base_t;
   typedef typename Vertex_t::ID_t ID_t;
   typedef typename Vertex_t::Data_t Data_t;
-  Vertex_Accessor(Base_t& base): Base_t(base) {}
-  sycl::accessor<ID_t, 1, Mode> & ids = std::get<0>(this->accessors);
-  sycl::accessor<Data_t, 1, Mode>& data = std::get<1>(this->accessors);
+  typedef Buffer_Accessor<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t> Base_t;
+  Vertex_Accessor(Base_t&& base): Base_t(base) {}
+  
+
+  sycl::accessor<ID_t, 1, Mode>  ids = std::get<0>(this->accessors);
+  sycl::accessor<Data_t, 1, Mode> data = std::get<1>(this->accessors);
   Vertex_t operator[](ID_t idx) const
   {
-    auto [id, data] = static_cast<Base_t>(this)->operator[](idx);
+    auto [id, data] = this->get_idx(idx);
     return Vertex_t(id, data);
   }
 };
@@ -86,7 +88,7 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
   template <sycl::access_mode Mode>
   Vertex_Accessor<Mode, Vertex_t> get_access(sycl::handler& h)
   {
-    return Vertex_Accessor<Mode, Vertex_t>(this->get_access<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t>(h));
+    return Vertex_Accessor<Mode, Vertex_t>(static_cast<Base_t*>(this)->template get_access<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t>(h));
   }
 
   void remove(const std::vector<ID_t> &ids) {

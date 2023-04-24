@@ -26,13 +26,8 @@ namespace Sycl_Graph
     typedef _Edge_Buffer_t Edge_Buffer_t;
 
     typedef typename Vertex_Buffer_t::uI_t uI_t;
-    typedef typename Vertex_Buffer_t::Vertex_t Vertex_t;
-    typedef typename Vertex_Buffer_t::Data_t Vertex_Data_t;
-    typedef typename Edge_Buffer_t::Edge_t Edge_t;
-    typedef typename Edge_Buffer_t::Data_t Edge_Data_t;
 
     typedef Graph<Vertex_Buffer_t, Edge_Buffer_t> Graph_t;
-    static constexpr auto invalid_id = Vertex_t::invalid_id;
     Vertex_Buffer_t vertex_buf;
     Edge_Buffer_t edge_buf;
 

@@ -17,7 +17,7 @@ namespace Sycl_Graph::Sycl
 
         Buffer_Accessor(sycl::buffer<Ds, 1> &...bufs, sycl::handler &h,
                         sycl::property_list props = {})
-            : accessors(std::make_tuple({bufs, h, props} ...))
+            : accessors(sycl::accessor<Ds, 1, Mode>(bufs, h, props)...)
         {
         }
 
@@ -32,9 +32,15 @@ namespace Sycl_Graph::Sycl
             return std::get<0>(accessors).size();
         }
 
-        std::tuple<Ds...> operator[](sycl::id<1> i) const
+        std::tuple<Ds...> get_idx(sycl::id<1> i) const
         {
             return std::apply([&i](auto &...accessors) { return std::make_tuple(accessors[i]...); }, accessors);
+        }
+
+
+        std::tuple<Ds...> operator[](sycl::id<1> i) const
+        {
+            return get_idx(i);
         }
 
         template <typename D>

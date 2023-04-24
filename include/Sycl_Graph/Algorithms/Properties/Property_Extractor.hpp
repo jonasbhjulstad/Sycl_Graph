@@ -2,12 +2,13 @@
 #define SYCL_GRAPH_ALGORITHMS_PROPERTIES_SYCL_PROPERTY_EXTRACTOR_HPP
 
 #include <CL/sycl.hpp>
-#include <Sycl_Graph/Algorithms/Properties/Property_Extractor.hpp>
 #include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
 #include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
 #include <tuple>
 
-namespace Sycl_Graph::Sycl {
+namespace Sycl_Graph {
+  template <typename T>
+  concept Property_Extractor_type = true;
 
   template <Sycl_Graph::Sycl::Graph_type Graph_t,
             Sycl_Graph::Property_Extractor_type Es>
@@ -19,12 +20,11 @@ namespace Sycl_Graph::Sycl {
     using To_t = typename Edge_t::To_t;
     auto& bufs = graph.edge_buf.buffers;
     using Buf_t = decltype(std::get<0>(bufs));
-    // std::cout << "buf_0: " << typeid(std::get<0>(bufs)).name() << ", buf_1: " << typeid(std::get<1>(bufs)).name() << ", buf_2: " << typeid(std::get<2>(bufs)).name() << std::endl;
     return q.submit([&](sycl::handler& h) {
       auto apply_acc = apply_buf.template get_access<sycl::access::mode::write>(h);
-      auto edge_acc = graph.template get_access<sycl::access::mode::read, Edge_t>(h);
-      auto from_acc = graph.template get_access<sycl::access::mode::read, From_t>(h);
-      auto to_acc = graph.template get_access<sycl::access::mode::read, To_t>(h);
+      auto edge_acc = graph.template get_edge_access<sycl::access::mode::read, Edge_t>(h);
+      auto from_acc = graph.template get_vertex_access<sycl::access::mode::read, From_t>(h);
+      auto to_acc = graph.template get_vertex_access<sycl::access::mode::read, To_t>(h);
       h.parallel_for(edge_acc.size(), [=](sycl::id<1> i) {
         const Edge_t& edge = edge_acc[i];
         apply_acc[i] = extractor.apply(edge, from_acc[edge.from], to_acc[edge.to]);
@@ -42,8 +42,8 @@ namespace Sycl_Graph::Sycl {
     return q.submit([&](sycl::handler& h) {
       h.depends_on(apply_event);
       auto apply_acc = apply_buf.template get_access<sycl::access::mode::read>(h);
-      auto accumulate_acc = accumulate_buf.template get_access<sycl::access::mode::write>(h);
-      h.parallel_for(accumulate_acc.size(),
+      auto accumulate_acc = accumulate_buf.template get_access<sycl::access::mode::read_write>(h);
+      h.parallel_for(graph.N_vertices(),
                      [=](sycl::id<1> id) { extractor.accumulate(apply_acc, accumulate_acc, id); });
     });
   }
@@ -115,7 +115,7 @@ namespace Sycl_Graph::Sycl {
       Graph_t& graph, const std::tuple<Es...>& extractors) {
     auto edge_sizes = std::apply(
         [&](auto... extractor) {
-          return std::make_tuple(graph.template current_size<typename Es::Edge_t>()...);
+          return std::make_tuple(graph.edge_buf.template current_size<typename Es::Edge_t>()...);
         },
         extractors);
 
@@ -132,20 +132,13 @@ namespace Sycl_Graph::Sycl {
             Sycl_Graph::Property_Extractor_type... Es>
   std::tuple<sycl::buffer<typename Es::Accumulate_t>...> construct_accumulation_buffers(
       Graph_t& graph, const std::tuple<Es...>& extractors) {
+    auto N_vertices = graph.N_vertices();
     auto edge_sizes = std::apply(
         [&](auto... extractor) {
           return std::make_tuple(graph.edge_buf.template current_size<typename Es::Edge_t>()...);
         },
         extractors);
-    std::tuple<sycl::buffer<typename Es::Accumulate_t>...> bufs = std::apply(
-        [&](auto&... edge_size) {
-          return std::apply(
-              [&](auto... extractors) {
-                return std::make_tuple(sycl::buffer<typename Es::Accumulate_t>(edge_size)...);
-              },
-              extractors);
-        },
-        edge_sizes);
+    std::tuple<sycl::buffer<typename Es::Accumulate_t>...> bufs = std::make_tuple(sycl::buffer<typename Es::Accumulate_t>(N_vertices)...);
     return bufs;
   }
 

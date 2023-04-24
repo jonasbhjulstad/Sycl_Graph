@@ -25,16 +25,10 @@
         template <typename T>
         static constexpr bool is_Buffer_Type = has_type<T, Buffer_t>::value;
 
-        template <typename D>
-        auto& get_buffer()
-        {
-            return std::get<index_of_type<D, typename Bs::Data_t ...>()>(buffers);
-        }
-
         template <typename ... Ds>
-        auto get_buffers()
+        auto& get_buffer() const
         {
-            return std::make_tuple((get_buffer<Ds>(), ...));
+            return std::get<index_of_type<std::tuple<Ds ...>, typename Bs::Data_t ...>()>(buffers);
         }
 
         auto size() const
