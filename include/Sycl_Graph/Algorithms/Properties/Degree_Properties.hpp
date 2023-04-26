@@ -33,6 +33,12 @@ namespace Sycl_Graph::Sycl {
         result_acc[from_id].from++;
       });
     }
+
+    size_t result_buffer_size(const Vertex_Buffer_From_t& buf_from, const Vertex_Buffer_To_t& buf_to,
+                                const Edge_Buffer_t& edge_buf) const 
+    {
+      return std::max({buf_from.current_size(), buf_to.current_size()});
+    }
   };
 
   template <Sycl_Graph::Vertex_Buffer_type Vertex_Buffer_From_t,
@@ -68,6 +74,12 @@ namespace Sycl_Graph::Sycl {
         result_acc[to_id]++;
         result_acc[from_id]++;
       });
+    }
+
+    size_t result_buffer_size(const Vertex_Buffer_From_t& buf_from, const Vertex_Buffer_To_t& buf_to,
+                                const Edge_Buffer_t& edge_buf) const 
+    {
+      return std::max({buf_from.current_size(), buf_to.current_size()});
     }
   };
 

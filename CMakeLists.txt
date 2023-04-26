@@ -18,7 +18,7 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 set(SYCL_GRAPH_CUDA_FLAGS -fsycl-targets=nvptx64-nvidia-cuda)
-option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" OFF)
+option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" ON)
 include(cmake/external_packages.cmake)
 
 set(SYCL_GRAPH_CLANG_BINARY_DIR "${IntelDPCPP_DIR}/../bin-llvm/clang++" CACHE STRING "Path to OneAPI clang/clang++ directory")

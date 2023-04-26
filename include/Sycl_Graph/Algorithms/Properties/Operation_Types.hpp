@@ -17,7 +17,13 @@ namespace Sycl_Graph::Sycl {
   concept Operation_type = requires(T t) {
                              T::operation_type;
                              T::operation_target;
+                             T::result_access_mode;
+                             T::operator();
+                             T::result_buffer_size;
                            };
+
+  template <typename T>
+  concept Invariant_Operation_type = Operation_type<T>;
 
 
 }  // namespace Sycl_Graph::Sycl

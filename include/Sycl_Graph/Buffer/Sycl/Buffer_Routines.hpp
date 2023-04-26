@@ -450,11 +450,6 @@ namespace Sycl_Graph
                       bufs);
   }
 
-  template <typename... Data_t, uint32_t ... sizes>
-  auto construct_buffers() {
-    return std::make_tuple(
-        sycl::buffer<Data_t>(sizes) ...);
-  }
 
 } // namespace Sycl_Graph
 #endif
