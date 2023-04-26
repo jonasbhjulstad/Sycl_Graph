@@ -1,7 +1,7 @@
 #ifndef SYCL_GRAPH_ALGORITHMS_PROPERTIES_ADJACENCY_HPP
 #define SYCL_GRAPH_ALGORITHMS_PROPERTIES_ADJACENCY_HPP
 #include <CL/sycl.hpp>
-#include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
+#include <Sycl_Graph/Graph/Sycl/Graph.hpp>
 #include <Sycl_Graph/Algorithms/Properties/Degree_Properties.hpp>
 #include <Eigen/Sparse>
 

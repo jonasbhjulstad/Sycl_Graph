@@ -4,7 +4,7 @@
 
 #ifndef SYCL_GRAPH_GRAPH_GENERATION_HPP
 #define SYCL_GRAPH_GRAPH_GENERATION_HPP
-#include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
+#include <Sycl_Graph/Graph/Sycl/Graph.hpp>
 #include <CL/sycl.hpp>
 #include <itertools.hpp>
 #include <memory>

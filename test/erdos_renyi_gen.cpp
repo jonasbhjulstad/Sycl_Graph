@@ -1,4 +1,4 @@
-#include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
+#include <Sycl_Graph/Graph/Sycl/Graph.hpp>
 #include <Sycl_Graph/Network/SIR_Bernoulli/SIR_Bernoulli.hpp>
 #include <Sycl_Graph/Graph/Graph_Generation.hpp>
 #include <Static_RNG/distributions.hpp>

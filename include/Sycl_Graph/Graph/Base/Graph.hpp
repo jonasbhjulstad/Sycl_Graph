@@ -92,56 +92,6 @@ namespace Sycl_Graph
       return edge_buf.get_edges();
     }
 
-    // // file I/O
-    // void write_edgelist(std::string filename, std::string delimiter = ",",
-    //                     bool edges_only = true)
-    // {
-    //   auto edges = edge_buf.get_edges();
-    //   std::ofstream file(filename);
-    //   file << "to" << delimiter << "from";
-    //   if (!edges_only)
-    //   {
-    //     file << delimiter << "data";
-    //   }
-    //   file << "\n";
-
-    //   write_edgelist(file, delimiter, edges_only);
-    //   file.close();
-    // }
-
-    // void write_edgelist(std::ofstream &file, std::string delimiter = ",",
-    //                     bool edges_only = true)
-    // {
-    //   auto edges = edge_buf.get_edges();
-    //   for (auto e : edges)
-    //   {
-    //     file << delimiter << e.to << delimiter << e.from;
-    //     if (!edges_only)
-    //     {
-    //       file << delimiter << e.data;
-    //     }
-    //     file << "\n";
-    //   }
-    // }
-
-    // void write_vertexlist(std::string filename, std::string delimiter = ",")
-    // {
-    //   auto vertices = vertex_buf.get_vertices();
-    //   std::ofstream file(filename);
-    //   file << delimiter << "id" << delimiter << "data"
-    //        << "\n";
-    //   write_vertexlist(file, delimiter);
-    //   file.close();
-    // }
-
-    // void write_vertexlist(std::ofstream &file, std::string delimiter = ",")
-    // {
-    //   auto vertices = vertex_buf.get_vertices();
-    //   for (auto v : vertices)
-    //   {
-    //     file << delimiter << v.id << delimiter << v.data << "\n";
-    //   }
-    // }
   };
 
   template <typename T>
@@ -168,10 +118,6 @@ namespace Sycl_Graph
     {t.remove_edge(0, 0)};
     {t.template get_edges<int>()};
     {t.template get_edges<int>(std::vector<typename T::uI_t>{})};
-    // {t.write_edgelist("")};
-    // {t.write_edgelist(std::ofstream{})};
-    // {t.write_vertexlist("")};
-    // {t.write_vertexlist(std::ofstream{})};
   };
 
 

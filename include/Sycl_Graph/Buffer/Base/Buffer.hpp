@@ -5,11 +5,7 @@
 namespace Sycl_Graph
 {
     template <typename T>
-    concept Buffer_type = requires(T buf)
-    {
-        typename T::Data_t;
-        typename T::uI_t;
-    };
+    concept Buffer_type = true;
     
 }
 

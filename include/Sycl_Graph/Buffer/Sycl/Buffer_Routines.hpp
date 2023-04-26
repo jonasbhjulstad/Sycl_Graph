@@ -38,6 +38,8 @@ namespace Sycl_Graph
 
   }
 
+
+
   template <typename ... Ts>
   void buffer_print(std::tuple<sycl::buffer<Ts, 1> ...>& bufs, sycl::queue &q)
   {
@@ -446,6 +448,12 @@ namespace Sycl_Graph
     return std::apply([&](auto &...buf)
                       { return buffer_combine(q, buf..., size0, size1); },
                       bufs);
+  }
+
+  template <typename... Data_t, uint32_t ... sizes>
+  auto construct_buffers() {
+    return std::make_tuple(
+        sycl::buffer<Data_t>(sizes) ...);
   }
 
 } // namespace Sycl_Graph

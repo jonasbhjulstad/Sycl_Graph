@@ -1,5 +1,5 @@
 #include <Sycl_Graph/Graph/Base/Graph.hpp>
-#include <Sycl_Graph/Graph/Sycl/Invariant_Graph.hpp>
+#include <Sycl_Graph/Graph/Sycl/Graph.hpp>
 #include <itertools.hpp>
 
 using namespace Sycl_Graph;
@@ -33,8 +33,8 @@ int main()
     Sycl_Graph::Sycl::Edge_Buffer i_f_e_buf(q, i_f_edges);
     Sycl_Graph::Sycl::Edge_Buffer f_i_e_buf(q, f_i_edges);
 
-    Sycl_Graph::Sycl::Buffer_Pack vertex_buffer(fv_buf, iv_buf);
-    Sycl_Graph::Sycl::Buffer_Pack edge_buffer(i_f_e_buf, f_i_e_buf);
+    Sycl_Graph::Buffer_Pack vertex_buffer(fv_buf, iv_buf);
+    Sycl_Graph::Buffer_Pack edge_buffer(i_f_e_buf, f_i_e_buf);
     Sycl_Graph::Sycl::Graph graph(vertex_buffer, edge_buffer, q);
     q.submit([&](sycl::handler& h)
     {
