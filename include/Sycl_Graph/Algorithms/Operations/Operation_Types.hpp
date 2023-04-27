@@ -10,16 +10,16 @@ namespace Sycl_Graph::Sycl {
     Operation_Direct_Transform,
     Operation_Buffer_Transform,
     Operation_Modify_Vertices,
-    Operation_Modify_Edges
+    Operation_Modify_Edges,
+    Operation_Modify_Inplace
   };
 
   template <typename T>
   concept Operation_type = requires(T t) {
                              T::operation_type;
                              T::operation_target;
-                             T::result_access_mode;
-                             T::operator();
-                             T::result_buffer_size;
+                            //  T::operator();
+                            //  T::result_buffer_size;
                            };
 
   template <typename T>

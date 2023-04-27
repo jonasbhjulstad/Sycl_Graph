@@ -12,14 +12,15 @@ struct Edge_Accessor: public Buffer_Accessor<Mode, typename Edge_t::Connection_I
   typedef typename Edge_t::Connection_IDs Connection_IDs;
   typedef typename Edge_t::Data_t Data_t;
   typedef Buffer_Accessor<Mode, Connection_IDs, Data_t> Base_t;
-  Edge_Accessor(Base_t&& base): Base_t(base){}
+  Edge_Accessor(const Base_t& base): Base_t(base){}
 
   sycl::accessor<Connection_IDs, 1, Mode>  ids = std::get<0>(this->accessors);
   sycl::accessor<Data_t, 1, Mode> data = std::get<1>(this->accessors);
   Edge_t operator[](sycl::id<1> idx) const
   {
-    auto [ids, data] = Base_t::operator[](idx);
-    return Edge_t(ids, data);
+    const auto& id = this->ids[idx];
+    const auto& data = this->data[idx];
+    return Edge_t(id, data);
   }
 };
 
@@ -48,7 +49,10 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
               
 
   std::vector<Connection_IDs> get_valid_ids() {
-      return this->template get<Connection_IDs>([](const auto& e){return e.is_valid();});
+      auto& id_buf = this->template get_buffer<Connection_IDs>();
+      std::vector<Connection_IDs> ids = buffer_get(id_buf);
+      ids.erase(std::remove_if(ids.begin(), ids.end(), [](const Connection_IDs& id){return id.to == Connection_IDs::invalid_id || id.from == Connection_IDs::invalid_id;}), ids.end());
+      return ids;
   }
 
   uI_t N_edges() const { return this->current_size(); }
@@ -64,7 +68,7 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
           ids.push_back(e.ids);
           data.push_back(e.data);
       }
-      this->template assign_add<Connection_IDs>(ids, data);
+      static_cast<Base_t*>(this)->add(std::make_tuple(ids, data));
   }
 
 
@@ -88,7 +92,7 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
   template <sycl::access_mode Mode>
   auto get_access(sycl::handler& h)
   {
-    return Edge_Accessor<Mode, Edge_t>(static_cast<Base_t*>(this)->template get_access<Mode, Connection_IDs, typename Edge_t::Data_t>(h));
+    return Edge_Accessor<Mode, Edge_t>(std::move(static_cast<Base_t*>(this)->template get_access<Mode, Connection_IDs, typename Edge_t::Data_t>(h)));
   }
 
 };

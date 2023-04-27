@@ -280,15 +280,32 @@ namespace Sycl_Graph {
   (std::make_index_sequence<std::tuple_size_v<T>>());
 
   template <class... Args, std::size_t... Is>
-  constexpr auto drop_tuple_tail_elem(std::tuple<Args...> tp, std::index_sequence<Is...>)
-  {
-      return std::tuple{std::get<Is>(tp)...};
+  constexpr auto drop_tuple_tail_elem(std::tuple<Args...> tp, std::index_sequence<Is...>) {
+    return std::tuple{std::get<Is>(tp)...};
   }
 
-  template <class... Args>
-  constexpr auto drop_last_tuple_elem(std::tuple<Args...> tp)
-  {
-      return drop_tuple_tail_elem(tp, std::make_index_sequence<sizeof...(Args) - 1>{});
+  template <class... Args> constexpr auto drop_last_tuple_elem(std::tuple<Args...> tp) {
+    return drop_tuple_tail_elem(tp, std::make_index_sequence<sizeof...(Args) - 1>{});
+  }
+
+  template <typename Tuple, std::size_t... Is>
+  constexpr auto pop_front_impl(const Tuple &tuple, std::index_sequence<Is...>) {
+    return std::make_tuple(std::get<1 + Is>(tuple)...);
+  }
+
+  template <typename Tuple> constexpr auto drop_first_tuple_elem(const Tuple &tuple) {
+    return pop_front_impl(tuple, std::make_index_sequence<std::tuple_size<Tuple>::value - 1>());
+  }
+
+  template <typename TupR, typename Tup = std::remove_reference_t<TupR>,
+            auto N = std::tuple_size_v<Tup>>
+  constexpr auto reverse_tuple(TupR &&t) {
+    return [&t]<auto... I>(std::index_sequence<I...>) {
+      constexpr std::array is{(N - 1 - I)...};
+      return std::tuple<std::tuple_element_t<is[I], Tup>...>{
+          std::get<is[I]>(std::forward<TupR>(t))...};
+    }
+    (std::make_index_sequence<N>{});
   }
 
 }  // namespace Sycl_Graph

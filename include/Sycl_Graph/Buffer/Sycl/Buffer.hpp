@@ -125,25 +125,26 @@ namespace Sycl_Graph::Sycl
             curr_size = std::min(curr_size, new_size);
         }
 
-        template <typename Target_t>
-        void assign_add(const std::tuple<std::vector<Ds> ...>& data)
+        // template <typename Target_t>
+        // void assign_add(const std::tuple<std::vector<Ds> ...>& data)
+        // {
+        //     auto N_added = buffer_assign_add<Target_t, uI_t, Ds ...>(bufs, q, data, curr_size);
+        //     curr_size += N_added;
+        // }
+
+        // template <typename Target_t>
+        // void assign_add(const std::vector<Ds>& ... data)
+        // {
+        //     this->assign_add<Target_t>(std::make_tuple(data ...));
+        // }
+
+        void add(const std::tuple<std::vector<Ds>...>& data)
         {
-            auto N_added = buffer_assign_add<Target_t, uI_t, Ds ...>(bufs, q, data, curr_size);
-            curr_size += N_added;
+            buffer_add(bufs, data, q, curr_size);
+            curr_size += std::get<0>(data).size();
         }
 
-        template <typename Target_t>
-        void assign_add(const std::vector<Ds>& ... data)
-        {
-            this->assign_add<Target_t>(std::make_tuple(data ...));
-        }
-
-        void add(const std::vector<Ds> &... data, uI_t offset = 0)
-        {
-            this->add(std::make_tuple(data...), offset);
-        }
-
-        void assign(const std::vector<Ds> &... data, uI_t offset = 0)
+        void assign(const std::vector<Ds> &... data)
         {
             buffer_assign(bufs, data..., q);
         }

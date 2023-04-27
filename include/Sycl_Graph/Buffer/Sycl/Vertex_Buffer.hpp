@@ -54,9 +54,12 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
     this->add(vertices);
   }
 
+
   std::vector<ID_t> get_valid_ids() {
-    return this->template get<ID_t>(
-        [](const auto &v) { return v.is_valid(); });
+      auto& id_buf = this->template get_buffer<ID_t>();
+      std::vector<ID_t> ids = buffer_get(id_buf);
+      ids.erase(std::remove_if(ids.begin(), ids.end(), [](const ID_t& id){return id == Vertex_t::invalid_id;}), ids.end());
+      return ids;
   }
 
   void add(const std::vector<Vertex_t>& vertices)
@@ -69,7 +72,8 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
       ids.push_back(v.id);
       data.push_back(v.data);
     }
-    this->template assign_add<ID_t>(ids, data);
+    auto tup = std::make_tuple(ids, data);
+    static_cast<Base_t*>(this)->add(tup);
   }
 
   uI_t N_vertices() const { return this->current_size(); }
