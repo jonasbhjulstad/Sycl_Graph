@@ -11,7 +11,7 @@ namespace Sycl_Graph::Sycl {
     return q.submit([&](sycl::handler& h) {
       h.depends_on(dep_event);
       auto result_acc = result_buf.template get_access<Op::result_access_mode>(h);
-      auto vertex_acc = graph.template get_vertex_access<sycl::access::mode::read, Vertex_t>(h);
+      auto vertex_acc = graph.template get_vertex_access<sycl::access_mode::read, Vertex_t>(h);
       operation(vertex_acc, result_acc, h);
     });
   }
@@ -25,7 +25,7 @@ namespace Sycl_Graph::Sycl {
       h.depends_on(dep_event);
       auto source_acc = source_buf.template get_access<sycl::access::mode::read>(h);
       auto vertex_acc
-          = graph.template get_vertex_access<sycl::access::mode::read_write, Vertex_t>(h);
+          = graph.template get_vertex_access<Op::vertex_access_mode, Vertex_t>(h);
       operation(source_acc, vertex_acc, h);
     });
   }
@@ -37,7 +37,7 @@ namespace Sycl_Graph::Sycl {
     return q.submit([&](sycl::handler& h) {
       h.depends_on(dep_event);
       auto vertex_acc
-          = graph.template get_vertex_access<sycl::access::mode::read_write, Vertex_t>(h);
+          = graph.template get_vertex_access<Op::vertex_access_mode, Vertex_t>(h);
       operation(source_acc, vertex_acc, h);
     });
   }
@@ -46,6 +46,7 @@ namespace Sycl_Graph::Sycl {
     typedef typename Vertex_Buffer_t::Vertex_t::Data_t Source_t;
     static constexpr Operation_Target_t operation_target = Operation_Target_Vertex;
     static constexpr Operation_Type_t operation_type = Operation_Modify_Vertices;
+    static constexpr sycl::access::mode vertex_access_mode = sycl::access::mode::write;
     typedef typename Vertex_Buffer_t::Vertex_t Vertex_t;
     Vertex_Inject_Op(const std::tuple<Vertex_Buffer_t>& buf) {}
 

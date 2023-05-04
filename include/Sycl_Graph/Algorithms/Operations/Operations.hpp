@@ -18,8 +18,8 @@ namespace Sycl_Graph::Sycl {
                                sycl::event dep_event = {}) {
     return q.submit([&](sycl::handler& h) {
       h.depends_on(dep_event);
-      auto source_acc = source_buf.template get_access<sycl::access::mode::read>(h);
-      auto result_acc = result_buf.template get_access<sycl::access::mode::read_write>(h);
+      auto source_acc = source_buf.template get_access<Op::source_access_mode>(h);
+      auto result_acc = result_buf.template get_access<sycl::access_mode::write>(h);
       operation(source_acc, result_acc, h);
     });
   }
@@ -30,7 +30,7 @@ namespace Sycl_Graph::Sycl {
                                        sycl::event dep_event = {}) {
     return q.submit([&](sycl::handler& h) {
       h.depends_on(dep_event);
-      auto buf_acc = result_buf.template get_access<sycl::access::mode::read_write>(h);
+      auto buf_acc = buf.template get_access<Op::access_mode>(h);
       operation(buf_acc, h);
     });
   }
@@ -62,11 +62,15 @@ namespace Sycl_Graph::Sycl {
         return edge_injection(q, operation, source_buf, dep_event);
     } else if constexpr (operation.operation_type == Operation_Modify_Inplace) {
       return invoke_inplace_operation(q, operation, source_buf, dep_event);
-    } else {
-      static_assert(operation.operation_target == Operation_Target_Vertex
-                        || operation.operation_target == Operation_Target_Edge,
-                    "Operation target must be either vertex or edge");
     }
+    static_assert(operation.operation_target == Operation_Target_Vertex
+                      || operation.operation_target == Operation_Target_Edge,
+                  "Operation target must be either vertex or edge");
+    static_assert(operation.operation_type == Operation_Modify_Vertices
+                      || operation.operation_type == Operation_Modify_Edges
+                      || operation.operation_type == Operation_Modify_Inplace,
+                  "Operation type must be modify vertices, edges or inplace");
+    return sycl::event{};
   }
 
   template <Sycl_Graph::Sycl::Graph_type Graph_t, Operation_type Op>
@@ -82,6 +86,8 @@ namespace Sycl_Graph::Sycl {
       static_assert(operation.operation_target == Operation_Target_Vertex
                         || operation.operation_target == Operation_Target_Edge,
                     "Operation target must be either vertex or edge");
+      static_assert(operation.operation_type == Operation_Modify_Inplace,
+                    "Operation type must be modify inplace");
     }
   }
 

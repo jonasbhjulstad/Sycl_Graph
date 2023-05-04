@@ -22,8 +22,8 @@ namespace Sycl_Graph::Sycl {
     typedef typename Vertex_Buffer_To_t::Vertex_t To_t;
 
     Directed_Vertex_Degree_Op() = default;
-    Directed_Vertex_Degree_Op(const std::tuple<Vertex_Buffer_From_t, const Vertex_Buffer_To_t,
-                              const Edge_Buffer_t>&, Degree_Direction direction = Degree_Direction_From) {}
+    Directed_Vertex_Degree_Op(const Vertex_Buffer_From_t&, const Vertex_Buffer_To_t&,
+                              const Edge_Buffer_t&, Degree_Direction direction = Degree_Direction_From) {}
 
     void operator()(const auto& edge_acc, const auto& from_acc, const auto& to_acc,
                     auto& result_acc, sycl::handler& h) const {

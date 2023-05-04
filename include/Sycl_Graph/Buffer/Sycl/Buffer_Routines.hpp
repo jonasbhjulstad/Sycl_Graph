@@ -166,6 +166,13 @@ namespace Sycl_Graph {
   }
 
   template <typename T, std::unsigned_integral uI_t = uint32_t>
+  void buffer_add(sycl::buffer<T>& buf, const std::vector<T>& data, sycl::queue& q, uI_t offset = 0)
+  {
+    sycl::buffer<T> tmp_buf(data.data(), sycl::range<1>(data.size()));
+    buffer_add(buf, tmp_buf, q, offset);
+  }
+
+  template <typename T, std::unsigned_integral uI_t = uint32_t>
   std::vector<T> buffer_get(sycl::buffer<T> &buf) {
     auto buf_acc = buf.get_host_access();
     std::vector<T> res(buf.size());
@@ -360,13 +367,6 @@ namespace Sycl_Graph {
     (buffer_remove(std::get<sycl::buffer<Ts, 1>>(bufs), q, offset, size), ...);
   }
 
-  // template <typename T, std::unsigned_integral uI_t = uint32_t>
-  // void buffer_remove(sycl::buffer<T, 1> &buf, sycl::queue &q, auto condition)
-  // {
-  //   auto buf_view = ranges::all_view<T, sycl::access::mode::read_write>(buf);
-  //   ranges::remove_if(oneapi::dpl::execution::dpcpp_default, buf_view, condition);
-  // }
-
   template <std::unsigned_integral uI_t, typename... Ts>
   void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
                      const std::vector<uI_t> &indices,
@@ -424,15 +424,9 @@ namespace Sycl_Graph {
     std::mt19937 gen(seed);
     sycl::buffer<uint32_t> seeds(N_seeds);
     // generate random uint32_t numbers
-    std::vector<uint32_t> seed_vec(N_threads);
+    std::vector<uint32_t> seed_vec(N_seeds);
     std::generate(seed_vec.begin(), seed_vec.end(), gen);
-    auto tmp_buf = sycl::buffer(seed_vec.data(), seed_vec.size());
-    q.submit([&](sycl::handler &h) {
-      auto tmp_acc = tmp_buf.get_access<sycl::access::mode::read>(h);
-      auto seeds_acc = seeds.get_access<sycl::access::mode::write>(h);
-      h.parallel_for(sycl::range<1>(N_threads),
-                     [=](sycl::id<1> id) { seeds_acc[id] = tmp_acc[id]; });
-    });
+    buffer_add(seeds, seed_vec, q);
     return seeds;
   }
 

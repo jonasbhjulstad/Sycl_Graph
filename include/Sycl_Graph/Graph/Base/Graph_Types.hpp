@@ -92,6 +92,18 @@ namespace Sycl_Graph
             to = ids.to;
             return *this;
         }
+
+        bool is_valid() const
+        {
+            return from != invalid_id && to != invalid_id;
+        }
+    };
+
+    enum Edge_Direction_t : uint8_t
+    {
+        Undirected = 0,
+        Directed = 1,
+        Bidirectional = 2
     };
 
     
