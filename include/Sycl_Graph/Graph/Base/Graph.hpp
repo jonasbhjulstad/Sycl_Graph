@@ -28,6 +28,7 @@ namespace Sycl_Graph
     typedef typename Vertex_Buffer_t::uI_t uI_t;
 
     typedef Graph<Vertex_Buffer_t, Edge_Buffer_t> Graph_t;
+
     Vertex_Buffer_t vertex_buf;
     Edge_Buffer_t edge_buf;
 
@@ -37,6 +38,13 @@ namespace Sycl_Graph
     uI_t N_edges() const { return edge_buf.current_size(); }
     uI_t N_vertices_max() const { return vertex_buf.max_size(); }
     uI_t N_edges_max() const { return edge_buf.max_size(); }
+
+    template <typename T>
+    static constexpr bool has_Edge_type = Edge_Buffer_t::template is_Data_types<typename T::Connection_IDs, typename T::Data_t>;
+
+    template <typename T>
+    static constexpr bool has_Vertex_type = Vertex_Buffer_t::template is_Data_types<typename T::ID_t, typename T::Data_t>;
+
     void resize(uI_t NV_new, uI_t NE_new)
     {
       vertex_buf.resize(NV_new);

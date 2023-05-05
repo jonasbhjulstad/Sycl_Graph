@@ -4,11 +4,11 @@
 namespace Sycl_Graph::Sycl {
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event vertex_extraction(Graph_t& graph, sycl::queue& q, const Op& operation,
+  sycl::event vertex_extraction(Graph_t& graph, const Op& operation,
                                 sycl::buffer<typename Op::Result_t>& result_buf,
                                 sycl::event dep_event = {}) {
     using Vertex_t = typename Op::Vertex_t;
-    return q.submit([&](sycl::handler& h) {
+    return graph.q.submit([&](sycl::handler& h) {
       h.depends_on(dep_event);
       auto result_acc = result_buf.template get_access<Op::result_access_mode>(h);
       auto vertex_acc = graph.template get_vertex_access<sycl::access_mode::read, Vertex_t>(h);
@@ -17,28 +17,42 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event vertex_injection(Graph_t& graph, sycl::queue& q, const Op& operation,
+  sycl::event vertex_injection(Graph_t& graph, const Op& operation,
                                sycl::buffer<typename Op::Source_t>& source_buf,
                                sycl::event dep_event = {}) {
     using Vertex_t = typename Op::Vertex_t;
-    return q.submit([&](sycl::handler& h) {
+    return graph.q.submit([&](sycl::handler& h) {
       h.depends_on(dep_event);
       auto source_acc = source_buf.template get_access<sycl::access::mode::read>(h);
-      auto vertex_acc
-          = graph.template get_vertex_access<Op::vertex_access_mode, Vertex_t>(h);
+      auto vertex_acc = graph.template get_vertex_access<Op::vertex_access_mode, Vertex_t>(h);
       operation(source_acc, vertex_acc, h);
     });
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event vertex_modification(Graph_t& graph, sycl::queue& q, const Op& operation,
-                                  sycl::event dep_event = {}) {
+  sycl::event vertex_transform(Graph_t& graph, const Op& operation,
+                               sycl::buffer<typename Op::Source_t>& source_buf,
+                               sycl::buffer<typename Op::Target_t>& target_buf,
+                               sycl::event dep_event = {})
+
+  {
     using Vertex_t = typename Op::Vertex_t;
-    return q.submit([&](sycl::handler& h) {
+    return graph.q.submit([&](sycl::handler& h) {
       h.depends_on(dep_event);
-      auto vertex_acc
-          = graph.template get_vertex_access<Op::vertex_access_mode, Vertex_t>(h);
-      operation(source_acc, vertex_acc, h);
+      auto source_acc = source_buf.template get_access<Op::source_access_mode>(h);
+      auto target_acc = target_buf.template get_access<sycl::access_mode::write>(h);
+      auto vertex_acc = graph.template get_vertex_access<sycl::access_mode::read, Vertex_t>(h);
+      operation(source_acc, target_acc, vertex_acc, h);
+    });
+  }
+
+  template <Graph_type Graph_t, Operation_type Op>
+  sycl::event vertex_inplace_modification(Graph_t& graph, const Op& operation, sycl::event dep_event = {}) {
+    using Vertex_t = typename Op::Vertex_t;
+    return graph.q.submit([&](sycl::handler& h) {
+      h.depends_on(dep_event);
+      auto vertex_acc = graph.template get_vertex_access<Op::inplace_access_mode, Vertex_t>(h);
+      operation(vertex_acc, h);
     });
   }
 
@@ -53,7 +67,7 @@ namespace Sycl_Graph::Sycl {
     void operator()(const auto& source_acc, auto& v_acc, sycl::handler& h) const {
       h.parallel_for(v_acc.get_count(), [=](auto i) { v_acc[i].data = source_acc[i]; });
     }
-    template <Graph_type Graph_t> size_t result_buffer_size(const Graph_t& G) const {
+    template <Graph_type Graph_t> size_t target_buffer_size(const Graph_t& G) const {
       return G.vertex_buf.template get_buffer<Vertex_Buffer_t>().current_size();
     }
   };

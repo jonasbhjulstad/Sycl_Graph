@@ -45,6 +45,9 @@ namespace Sycl_Graph
         {t.data} -> std::convertible_to<typename T::Data_t>;
     };
 
+    template <typename T>
+    static constexpr bool is_Vertex_type = Vertex_type<T>;
+
     template <typename _ID_t = uint32_t, _ID_t _invalid_id = std::numeric_limits<_ID_t>::max()>
     struct Connection_ID_Pair
     {
@@ -101,24 +104,31 @@ namespace Sycl_Graph
 
     enum Edge_Direction_t : uint8_t
     {
-        Undirected = 0,
-        Directed = 1,
-        Bidirectional = 2
+        Edge_Direction_Undirected = 0,
+        Edge_Direciton_Directed = 1,
+        Edge_Direction_Bidirectional = 2
     };
 
     
 
 
 
-    template <typename T>
-    static constexpr bool is_Edge_type = std::unsigned_integral<typename T::ID_t> && std::is_convertible_v<decltype(std::declval<T>().ids), typename T::Connection_IDs> && std::is_convertible_v<decltype(std::declval<T>().data), typename T::Data_t>;
 
     template <typename T>
     concept Edge_type = requires(T t)
     {
         typename T::Data_t;
+        typename T::Connection_IDs;
         typename T::ID_t;
         T::invalid_id;
     };
+
+    template <typename T>
+    static constexpr bool is_Edge_type = Edge_type<T>;
+
+
+
+
+
 } // namespace Sycl_Graph
 #endif // SYCL_GRAPH_GRAPH_TYPES_HPP

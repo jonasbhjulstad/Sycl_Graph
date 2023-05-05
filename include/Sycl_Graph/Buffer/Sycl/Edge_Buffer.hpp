@@ -46,7 +46,7 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
               {
                 this->add(edges);
               }
-              
+
 
   std::vector<Connection_IDs> get_valid_ids() {
       auto& id_buf = this->template get_buffer<Connection_IDs>();

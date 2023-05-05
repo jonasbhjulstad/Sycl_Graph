@@ -48,8 +48,6 @@ namespace Sycl_Graph::Sycl {
     template <Edge_type E, sycl::access_mode Mode>
     using Edge_Pack_Accessor_t = typename std::enable_if<Buffer_Pack_type<Edge_Buffer_t>, Edge_Accessor<Mode, E>>::type;
 
-
-
     template <sycl::access_mode Mode, Vertex_type V>
     Vertex_Pack_Accessor_t<V, Mode> get_vertex_access(sycl::handler &h) {
       auto &buf = std::get<Vertex_Buffer<V>>(this->vertex_buf.buffers);
@@ -76,6 +74,36 @@ namespace Sycl_Graph::Sycl {
     Edge_Accessor_t<E, Mode> get_edge_access(sycl::handler &h) {
       auto &buf = this->edge_buf;
       return buf.template get_access<Mode>(h);
+    }
+
+    template <sycl::access_mode Mode, typename T>
+    auto get_access(sycl::handler& h)
+    {
+      static_assert(this->template has_Vertex_type<T> || this->template has_Edge_type<T>);
+      if constexpr(this->template has_Vertex_type<T>)
+      {
+        return get_vertex_access<Mode, T>(h);
+      }
+      else if constexpr(this->template has_Edge_type<T>)
+      {
+        return get_edge_access<Mode, T>(h);
+      }
+    }
+
+
+    template <typename T>
+    size_t current_size() const
+    {
+      if constexpr (is_Vertex_type<T>)
+      {
+        return this->vertex_buf.template get_buffer<typename T::ID_t, typename T::Data_t>().current_size();
+      }
+      else if constexpr(is_Edge_type<T>)
+      {
+        return this->edge_buf.template get_buffer<typename T::Connection_IDs, typename T::Data_t>().current_size();
+      }
+
+      return -1;
     }
 
   };

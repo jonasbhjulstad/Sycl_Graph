@@ -21,7 +21,9 @@ namespace Sycl_Graph {
 
     static constexpr uI_t invalid_id = std::numeric_limits<uI_t>::max();
 
-    template <typename T> static constexpr bool is_Buffer_Type = has_type<T, Buffer_t>::value;
+    template <typename T> static constexpr bool is_Buffer_type = has_type<T, Buffer_t>::value;
+    template <typename T> static constexpr bool is_Data_type = (has_type<T, typename Bs::Data_t>::value && ...);
+    template <typename ... Ts> static constexpr bool is_Data_types = (is_Data_type<Ts> && ...);
 
     template <typename... Ds> auto &get_buffer() const {
       return std::get<index_of_type<std::tuple<Ds...>, typename Bs::Data_t...>()>(buffers);

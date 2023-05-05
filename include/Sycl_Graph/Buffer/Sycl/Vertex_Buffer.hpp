@@ -54,6 +54,12 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
     this->add(vertices);
   }
 
+  template <typename T>
+  static constexpr bool has_Vertex_type()
+  {
+    return std::is_same_v<T, Vertex_t>;
+  }
+
 
   std::vector<ID_t> get_valid_ids() {
       auto& id_buf = this->template get_buffer<ID_t>();
