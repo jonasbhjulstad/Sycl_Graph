@@ -79,12 +79,12 @@ namespace Sycl_Graph::Sycl {
     template <sycl::access_mode Mode, typename T>
     auto get_access(sycl::handler& h)
     {
-      static_assert(this->template has_Vertex_type<T> || this->template has_Edge_type<T>);
-      if constexpr(this->template has_Vertex_type<T>)
+      // static_assert(this->template has_Vertex_type<T> || this->template has_Edge_type<T>);
+      if constexpr(is_Vertex_type<T>)
       {
         return get_vertex_access<Mode, T>(h);
       }
-      else if constexpr(this->template has_Edge_type<T>)
+      else if constexpr(is_Edge_type<T>)
       {
         return get_edge_access<Mode, T>(h);
       }
@@ -94,13 +94,13 @@ namespace Sycl_Graph::Sycl {
     template <typename T>
     size_t current_size() const
     {
-      if constexpr (is_Vertex_type<T>)
-      {
-        return this->vertex_buf.template get_buffer<typename T::ID_t, typename T::Data_t>().current_size();
-      }
-      else if constexpr(is_Edge_type<T>)
+      if constexpr(is_Edge_type<T>)
       {
         return this->edge_buf.template get_buffer<typename T::Connection_IDs, typename T::Data_t>().current_size();
+      }
+      else if constexpr (is_Vertex_type<T>)
+      {
+        return this->vertex_buf.template get_buffer<typename T::ID_t, typename T::Data_t>().current_size();
       }
 
       return -1;

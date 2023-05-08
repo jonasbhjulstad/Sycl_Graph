@@ -1,6 +1,7 @@
 #ifndef SYCL_GRAPH_GRAPH_HPP
 #define SYCL_GRAPH_GRAPH_HPP
 #include <concepts>
+#include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
 #include <Sycl_Graph/Buffer/Base/Edge_Buffer.hpp>
 #include <Sycl_Graph/Buffer/Base/Vertex_Buffer.hpp>
 namespace Sycl_Graph
@@ -40,10 +41,10 @@ namespace Sycl_Graph
     uI_t N_edges_max() const { return edge_buf.max_size(); }
 
     template <typename T>
-    static constexpr bool has_Edge_type = Edge_Buffer_t::template is_Data_types<typename T::Connection_IDs, typename T::Data_t>;
+    static constexpr bool has_Edge_type = is_Edge_type<T> && Edge_Buffer_t::template is_Data_types<typename T::Connection_IDs, typename T::Data_t>;
 
     template <typename T>
-    static constexpr bool has_Vertex_type = Vertex_Buffer_t::template is_Data_types<typename T::ID_t, typename T::Data_t>;
+    static constexpr bool has_Vertex_type = is_Vertex_type<T> && Vertex_Buffer_t::template is_Data_types<typename T::ID_t, typename T::Data_t>;
 
     void resize(uI_t NV_new, uI_t NE_new)
     {

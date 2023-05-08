@@ -3,6 +3,9 @@
 #include <Sycl_Graph/Algorithms/Operations/Operation_Types.hpp>
 
 namespace Sycl_Graph::Sycl {
+
+
+
   template <Graph_type Graph_t, Operation_type Op>
   sycl::buffer<typename Op::Target_t> create_result_buffer(const Graph_t& G, const Op& operation) {
     auto size = operation.target_buffer_size(G);
@@ -76,6 +79,42 @@ namespace Sycl_Graph::Sycl {
           return std::make_tuple(std::make_pair(buffer_get(buf.first), buffer_get(buf.second))...);
         },
         buffer_pairs);
+  }
+
+
+  template <Operation_type Op>
+  auto create_operation_buffer_pair(const Op& operation)
+  {
+    if constexpr (is_Extraction_Operation_type<Op>)
+    {
+      return std::make_pair({}, create_result_buffer(G, operation));
+    }
+    else if constexpr(is_Injection_Operation_type<Op>)
+    {
+      return std::make_pair(create_source_buffer(G, operation), {});
+    }
+    else if constexpr(is_Transformation_Operation_type<Op>)
+    {
+      return std::make_pair(create_source_buffer(G, operation), create_result_buffer(G, operation));
+    }
+    static_assert(is_Extraction_Operation_type<Op> || is_Injection_Operation_type<Op> || is_Transformation_Operation_type<Op>,
+                  "Operation must have either a source or target type");
+  }
+
+
+  template <Operation_type First, Operation_type Second, Operation_type... Op>
+  struct Buffer_Sequence_Generator
+  {
+    auto _create_buffers(const std::tuple<First, Second, Op ...>& operations)
+    {
+
+    }
+
+    auto create_buffers(const std::tuple<First, Second, Op ...>& operations)
+    {
+      auto [source_buf, target_buf] = create_operation_buffer_pair(std::get<0>(operations));
+      return 
+    }
   }
 
 }  // namespace Sycl_Graph::Sycl

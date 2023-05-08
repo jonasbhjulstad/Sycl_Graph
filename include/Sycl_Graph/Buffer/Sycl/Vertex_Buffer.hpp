@@ -3,6 +3,7 @@
 #include <CL/sycl.hpp>
 #include <type_traits>
 #include <concepts>
+#include <Sycl_Graph/Buffer/Base/Vertex_Buffer.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
 namespace Sycl_Graph::Sycl {

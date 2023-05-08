@@ -34,7 +34,7 @@ namespace Sycl_Graph::Sycl {
   template <Sycl_Graph::Sycl::Graph_type Graph_t, Operation_type Op_0, Operation_type... Op>
   auto invoke_operation_sequence(
       Graph_t&, sycl::queue& q, const std::tuple<Op_0, Op...>& op_sequence,
-      std::tuple<sycl::buffer<typename Op_0::Source_t, typename Op_0::Result_t,
+      std::tuple<sycl::buffer<typename Op_0::Source_t>, typename Op_0::Result_t,
                               typename Op::Result_t>...>& bufs,
       sycl::event dep_event = {}) {
     return op_sequence_invoke(G, bufs, dep_event);
@@ -48,6 +48,13 @@ namespace Sycl_Graph::Sycl {
         = invoke_operation(G, q, std::get<0>(op_sequence), std::get<0>(result_buf), dep_event);
     return op_sequence_invoke(G, q, drop_first_tuple_elem(op_sequence), result_buf, dep_event);
   }
+
+  template <typename T>
+  concept Operation_Sequence_type = tuple_like<T> && requires(T t) {
+    std::apply([&](auto&&... t) { requires(Operation_type<decltype(t)>); }, t);
+
+  };
+
 
 }  // namespace Sycl_Graph::Sycl
 #endif

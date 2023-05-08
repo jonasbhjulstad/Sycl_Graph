@@ -8,137 +8,79 @@
 #include <Sycl_Graph/Algorithms/Operations/Vertex_Operations.hpp>
 #include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
+#include <array>
 #include <tuple>
 
 namespace Sycl_Graph::Sycl {
 
-  // template <Operation_type Op> using Buffer_Pair_t
-  //     = std::tuple<sycl::buffer<typename Op::Source_t>, sycl::buffer<typename Op::Target_t>>;
-
-  // template <Graph_type Graph_t, Operation_type Op>
-  // sycl::event transform_dispatch(Graph_t& G, const Op& operation, Buffer_Pair_t<Op>& bufs,
-  //                                sycl::event dep_event = {}) {
-  //   if constexpr (has_Iterator_t<Op>) {
-  //     if constexpr (Graph_t::template has_Edge_type<typename Op::Iterator_t>) {
-  //       return edge_transform(G, operation, bufs.first, bufs.second, dep_event);
-  //     } else if constexpr (Graph_t::template has_Vertex_type<typename Op::Iterator_t>) {
-  //       return vertex_transform(G, operation, bufs.first, bufs.second, dep_event);
-  //     }
-  //   } else {
-  //     return buffer_transform(G, operation, bufs.first, bufs.second, dep_event);
-  //   }
-  // }
-  // template <Graph_type Graph_t, Operation_type Op>
-  // sycl::event injection_dispatch(Graph_t& G, const Op& operation,
-  //                                sycl::buffer<typename Op::Source_t>& buf,
-  //                                sycl::event dep_event = {}) {
-  //   if constexpr (Graph_t::template has_Edge_type<typename Op::Iterator_t>) {
-  //     return edge_injection(G, operation, dep_event);
-  //   } else if constexpr (Graph_t::template has_Vertex_type<typename Op::Iterator_t>) {
-  //     return vertex_injection(G, operation, dep_event);
-  //   }
-  //   static_assert(Graph_t::template has_Edge_type<typename Op::Iterator_t>
-  //                     || Graph_t::template has_Vertex_type<typename Op::Iterator_t>,
-  //                 "Operation iterator must be either vertex or edge");
-  // }
-  // template <Graph_type Graph_t, Operation_type Op>
-  // sycl::event extraction_dispatch(Graph_t& G, const Op& operation,
-  //                                 sycl::buffer<typename Op::Target_t>& buf,
-  //                                 sycl::event dep_event = {}) {
-  //   if constexpr (Graph_t::template has_Edge_type<typename Op::Iterator_t>) {
-  //     return edge_extraction(G, operation, buf, dep_event);
-  //   } else if constexpr (Graph_t::template has_Vertex_type<typename Op::Iterator_t>) {
-  //     return vertex_extraction(G, operation, buf, dep_event);
-  //   }
-  //   static_assert(Graph_t::template has_Edge_type<typename Op::Iterator_t>
-  //                     || Graph_t::template has_Vertex_type<typename Op::Iterator_t>,
-  //                 "Operation iterator must be either vertex or edge");
-  // }
-
-  // template <Graph_type Graph_t, Operation_type Op>
-  // sycl::event inplace_dispatch(Graph_t& G, const Op& operation,
-  //                              sycl::buffer<typename Op::Target_t>& buf,
-  //                              sycl::event dep_event = {}) {
-  //   if constexpr (has_Iterator_t<Op>) {
-  //     if constexpr (Graph_t::template has_Edge_type<typename Op::Iterator_t>) {
-  //       return edge_inplace_modification(G, operation, buf, dep_event);
-  //     } else if constexpr (Graph_t::template has_Vertex_type<typename Op::Iterator_t>) {
-  //       return vertex_inplace_modification(G, operation, buf, dep_event);
-  //     }
-  //     static_assert(Graph_t::template has_Edge_type<typename Op::Iterator_t>
-  //                       || Graph_t::template has_Vertex_type<typename Op::Iterator_t>,
-  //                   "Operation iterator must be either vertex or edge");
-  //   } else {
-  //     return buffer_inplace_modification(G, operation, buf, dep_event);
-  //   }
-  // }
-
-  // template <Graph_type Graph_t, Operation_type Op>
-  // sycl::event invoke_operation(Graph_t& G, const Op& operation, auto& bufs,
-  //                              sycl::event dep_event = {}) {
-  //   if constexpr (has_Inplace_t<Op>) {
-  //     return inplace_dispatch(G, operation, bufs, dep_event);
-  //   }
-  //   if constexpr (has_Source_t<Op>) {
-  //     if constexpr (has_Target_t<Op>) {
-  //       return transform_dispatch(G, operation, bufs, dep_event);
-  //     } else {
-  //       return injection_dispatch(G, operation, bufs, dep_event);
-  //     }
-  //   } else if constexpr (has_Target_t<Op> && has_Iterator_t<Op>) {
-  //     return extraction_dispatch(G, operation, bufs, dep_event);
-  //   }
-  //   static_assert(has_Source_t<Op> || has_Target_t<Op> || has_Iterator_t<Op>,
-  //                 "Operation must have either source, target or iterator");
-  // }
+  namespace _detail {
+    template <Graph_type Graph_t, Operation_type Op, std::size_t... Indices>
+    auto get_graph_accessor_impl(Graph_t& graph, sycl::handler& h,
+                                 const std::index_sequence<Indices...>&) {
+      return std::make_tuple(
+          graph.template get_access<std::get<Indices>(Op::graph_access_modes),
+                                    std::tuple_element_t<Indices, typename Op::Accessor_Types>>(
+              h)...);
+    }
+  }  // namespace _detail
 
   template <Graph_type Graph_t, Operation_type Op>
   auto get_graph_accessors(Graph_t& graph, sycl::handler& h) {
-    auto dummy = typename Op::Accessor_Types();
-    auto accessors = std::apply(
-        [&](auto&&... modes) {
-          return std::apply(
-              [&](auto&&... args) {
-                return std::make_tuple(graph.template get_access<modes, decltype(args)>(h)...);
-              },
-              dummy);
-        },
-        Op::graph_access_modes);
+    // create index sequence for 'typename Op::Accessor_Types'
+    constexpr size_t size = std::tuple_size<typename Op::Accessor_Types>::value;
+    constexpr auto seq = std::make_integer_sequence<size_t, size>();
+    return _detail::get_graph_accessor_impl<Graph_t, Op>(graph, h, seq);
   }
+  template <Operation_type Op> using Extraction_Op_Event_t
+      = std::enable_if<is_Vertex_type<typename Op::Source_t>::value
+                           || is_Edge_type<typename Op::Source_t>::value,
+                       sycl::event>::type;
+  template <Operation_type Op> using Injection_Op_Event_t
+      = std::enable_if<is_Vertex_type<typename Op::Target_t>::value
+                           || is_Edge_type<typename Op::Target_t>::value,
+                       sycl::event>::type;
+
+  template <Operation_type Op> using Transform_Op_Event_t
+      = std::enable_if<!is_Vertex_type<typename Op::Target_t>::value
+                           && !is_Edge_type<typename Op::Target_t>::value
+                           && !is_Vertex_type<typename Op::Source_t>::value
+                           && !is_Edge_type<typename Op::Source_t>::value,
+                       sycl::event>::type;
+
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_operation(Graph_t& graph, Op& operation,
-                               sycl::buffer<typename Op::Source_t>& source_buf,
-                               sycl::buffer<typename Op::Target_t>& target_buf,
-                               sycl::event dep_event = {}) {
+  Transform_Op_Event_t<Op> invoke_operation(Graph_t& graph, Op& operation,
+                                            Source_Buffer_t<Op>& source_buf,
+                                            Target_Buffer_t<Op>& target_buf,
+                                            sycl::event dep_event = {}) {
     return graph.q.submit({[&](sycl::handler& h) {
-      auto source_acc = source_buf.template get_access<sycl::access_mode::read>(h);
-      auto target_acc = target_buf.template get_access<Op::target_access_mode>(h);
+      auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
+      auto target_acc = target_buf->template get_access<Op::target_access_mode>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
       operation(accessors, source_acc, target_acc, h);
     }});
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_operation(Graph_t& graph, Op& operation,
-                               sycl::buffer<typename Op::Source_t>& source_buf,
-                               sycl::event dep_event = {}) {
+  Extraction_Op_Event_t<Op> invoke_operation(Graph_t& graph, Op& operation,
+                                             Source_Buffer_t<Op>& source_buf, Target_Buffer_t<Op>&,
+                                             sycl::event dep_event = {}) {
     return graph.q.submit({[&](sycl::handler& h) {
-      auto source_acc = source_buf.template get_access<sycl::access_mode::read>(h);
+      auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
       operation(accessors, source_acc, h);
     }});
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_operation(Graph_t& graph, Op& operation,
-                               sycl::buffer<typename Op::Target_t>& target_buf,
-                               sycl::event dep_event = {}) {
-    return graph.q.submit({[&](sycl::handler& h) {
-      auto target_acc = target_buf.template get_access<Op::target_access_mode>(h);
+  Injection_Op_Event_t<Op> invoke_operation(Graph_t& graph, Op& operation, Source_Buffer_t<Op>&,
+                                            Target_Buffer_t<Op>& target_buf,
+                                            sycl::event dep_event = {}) {
+    return graph.q.submit([&](sycl::handler& h) {
+      auto target_acc = target_buf->template get_access<Op::target_access_mode>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
-      operation(accessors, target_acc, h);
-    }});
+      operation._invoke(accessors, target_acc, h);
+    });
   }
 
   template <Graph_type Graph_t, Operation_type Op>
@@ -149,18 +91,24 @@ namespace Sycl_Graph::Sycl {
     }});
   }
 
-  template <Graph_type Graph_t, Operation_type... Op, typename... Bufs_t>
+  template <Graph_type Graph_t, Operation_type... Op>
   auto invoke_operations(Graph_t& graph, const std::tuple<Op...>& operations,
-                         std::tuple<Bufs_t...>& bufs) {
+                         std::tuple<Source_Buffer_t<Op>, ...>& source_bufs,
+                         std::tuple<Target_Buffer_t<Op>, ...>& target_bufs) {
     return std::apply(
-        [&](auto&... target_buf) {
+        [&](auto&&... source_buf) {
           return std::apply(
-              [&](const auto&... op) {
-                return std::make_tuple(invoke_operation(graph, op, target_buf)...);
+              [&](auto&&... target_buf) {
+                return std::apply(
+                    [&](const auto&&... op) {
+                      return std::make_tuple(
+                          invoke_operation(graph, op, source_buf, target_buf)...);
+                    },
+                    operations);
               },
-              operations);
+              target_bufs);
         },
-        bufs);
+        source_bufs);
   }
 
   template <Graph_type Graph_t, Operation_type... Op>
