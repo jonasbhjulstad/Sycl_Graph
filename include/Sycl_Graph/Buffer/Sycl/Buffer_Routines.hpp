@@ -2,11 +2,12 @@
 #define SYCL_GRAPH_Buffer_Routines_HPP
 #include <CL/sycl.hpp>
 #include <algorithm>
+#include <iostream>
+#include <optional>
+#include <random>
 #include <string>
 #include <tuple>
 #include <vector>
-#include <random>
-#include <iostream>
 namespace Sycl_Graph {
   // using namespace oneapi::dpl::experimental;
 
@@ -166,8 +167,8 @@ namespace Sycl_Graph {
   }
 
   template <typename T, std::unsigned_integral uI_t = uint32_t>
-  void buffer_add(sycl::buffer<T>& buf, const std::vector<T>& data, sycl::queue& q, uI_t offset = 0)
-  {
+  void buffer_add(sycl::buffer<T> &buf, const std::vector<T> &data, sycl::queue &q,
+                  uI_t offset = 0) {
     sycl::buffer<T> tmp_buf(data.data(), sycl::range<1>(data.size()));
     buffer_add(buf, tmp_buf, q, offset);
   }
@@ -207,6 +208,15 @@ namespace Sycl_Graph {
   std::tuple<std::vector<Ts>...> buffer_get(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
                                             sycl::queue &q, auto condition) {
     return std::make_tuple(buffer_get(std::get<sycl::buffer<Ts, 1>>(bufs), q, condition)...);
+  }
+
+  template <typename T>
+  std::optional<std::vector<T>> buffer_get(std::shared_ptr<sycl::buffer<T>> buf) {
+    return buf ? std::optional<std::vector<T>>(buffer_get(*buf)) : std::nullopt;
+  }
+
+  template <typename... Buf_t> auto buffer_get(std::tuple<std::shared_ptr<Buf_t>...> &bufs) {
+    return std::apply([&](auto &&...buf) { return std::make_tuple(buffer_get(buf)...); }, bufs);
   }
 
   template <typename T, std::unsigned_integral uI_t = uint32_t>

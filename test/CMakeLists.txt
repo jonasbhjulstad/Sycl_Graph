@@ -14,6 +14,7 @@ add_custom_executable(eigen_sycl)
 add_custom_executable(property_extractor)
 add_custom_executable(type_helpers_test)
 add_custom_executable(graph_access)
+add_custom_executable(operation_buffers)
 add_executable(has_member has_member.cpp)
 #set cxx standard to 20
 target_compile_options(has_member PRIVATE -std=c++20)

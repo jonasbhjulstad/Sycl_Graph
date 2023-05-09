@@ -33,12 +33,26 @@ namespace Sycl_Graph::Sycl {
                                                              typename T::Source_t;
                                                            };
   template <typename T> constexpr bool is_Extraction_Operation_type = Extraction_Operation_type<T>;
+  template <typename T>
+  concept has_Source = requires(T op) {
+    typename T::Source_t;
+    T::source_buffer_size;
+  };
 
-  template <Operation_type Op> using Source_Buffer_t
-      = std::optional<sycl::buffer<typename Op::Source_t>>;
+  template <typename T>
+  bool constexpr has_Source_v = has_Source<T>;
 
-  template <Operation_type Op> using Target_Buffer_t
-      = std::optional<sycl::buffer<typename Op::Target_t>>;
+  template <typename T>
+  concept has_Target = requires(T op) {
+    typename T::Target_t;
+    T::target_buffer_size;
+  };
+
+  template <typename T>
+  bool constexpr has_Target_v = has_Target<T>;
+
+  struct Operation_Buffer_Void_t{char dummy;};
+
 
 }  // namespace Sycl_Graph::Sycl
 

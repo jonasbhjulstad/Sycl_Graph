@@ -13,7 +13,7 @@ namespace Sycl_Graph::Epidemiological {
       : public Vertex_Extract_Operation<Vertex_Buffer_t, SIR_Vertex_Recovery_Op<Vertex_Buffer_t>> {
     typedef SIR_Individual_State_t Target_t;
     typedef typename Vertex_Buffer_t::Vertex_t Vertex_t;
-
+    
     typedef SIR_Individual_State_t Target_t;
 
     float p_R = 0.0f;

@@ -71,11 +71,13 @@ int main() {
   };
 
   auto print_vec = [&](const auto& vec, const auto& name) {
-    std::cout << "op for " << name << " edges" << std::endl;
-    for (const auto& v : vec) {
-      std::cout << v << ",";
+    if (vec.has_value()) {
+      std::cout << "op for " << name << " edges" << std::endl;
+      for (const auto& v : vec.value) {
+        if () std::cout << v << ",";
+      }
+      std::cout << std::endl;
     }
-    std::cout << std::endl;
   };
   uint32_t n = 0;
 
@@ -88,7 +90,7 @@ int main() {
               // ((std::cout << "Property " << n++ << std::endl), printvecpair(args), ...);
               (print_vec(args, name), ...);
             },
-            properties);
+            std::get<1>(properties));
       },
       edge_type_names);
 

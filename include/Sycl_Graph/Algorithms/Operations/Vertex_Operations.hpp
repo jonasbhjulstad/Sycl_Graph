@@ -53,7 +53,6 @@ namespace Sycl_Graph::Sycl {
 
   template <Sycl_Graph::Vertex_Buffer_type Vertex_Buffer_t, typename Derived>
   struct Vertex_Direct_Inject_Op: public Vertex_Inject_Operation<Vertex_Buffer_t, Derived> {
-
     void _invoke(auto& accessors, const auto& source_acc, sycl::handler& h) {
       auto& v_acc = std::get<0>(accessors);
       h.parallel_for(v_acc.size(), [&](sycl::id<1> id) {

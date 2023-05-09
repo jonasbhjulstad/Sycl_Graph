@@ -20,9 +20,8 @@ endif()
 set(SYCL_GRAPH_CUDA_FLAGS -fsycl-targets=nvptx64-nvidia-cuda)
 option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" OFF)
 include(cmake/external_packages.cmake)
-
 set(SYCL_GRAPH_CLANG_BINARY_DIR "${IntelDPCPP_DIR}/../bin-llvm/clang++" CACHE STRING "Path to OneAPI clang/clang++ directory")
-
+set(CMAKE_COLOR_MAKEFILE ON)
 include(cmake/custom_executable.cmake)
 include(cmake/ccache.cmake)
 # ---- Add source files ----
@@ -52,7 +51,7 @@ target_include_directories(
 set(SYCL_GRAPH_DOXYGEN_IN ${PROJECT_SOURCE_DIR}/docs_doxygen/Doxyfile.in)
 set(SYCL_GRAPH_DOXYGEN_OUT ${PROJECT_BINARY_DIR}/Doxyfile.out)
 add_subdirectory(test)
-add_compile_options("-fcolor-diagnostics")
+add_compile_options("-Xclang -fcolor-diagnostics")
 add_compile_options("-v")
 # add_compile_options("-fdiagnostics-format=gcc")
 # ---- Create an installable target ----
