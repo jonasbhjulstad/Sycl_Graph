@@ -84,6 +84,7 @@ namespace Sycl_Graph::Sycl {
     } else if constexpr(!has_Source_v<Op> && !has_Target_v<Op>) {
       return invoke_inplace_modification(G, operation);
     }
+    return {};
   }
 
   template <Graph_type Graph_t, Operation_type... Op, tuple_like Source_Bufs_t, tuple_like Target_Bufs_t>
@@ -93,20 +94,27 @@ namespace Sycl_Graph::Sycl {
 
     auto test = std::tuple_cat(source_bufs, target_bufs);
 
-    return std::apply(
-        [&](auto&&... source_buf) {
-          return std::apply(
-              [&](auto&&... target_buf) {
-                return std::apply(
-                    [&](const auto&&... op) {
-                      return std::make_tuple(
-                          invoke_operation(graph, op, source_buf, target_buf)...);
-                    },
-                    operations);
-              },
-              target_bufs);
-        },
-        source_bufs);
+    //assert that size of source_bufs and target_bufs is the same
+    static_assert(std::tuple_size_v<Source_Bufs_t> == std::tuple_size_v<Target_Bufs_t>);
+
+    multi_apply(invoke_operation<Graph_t, , operations, source_bufs, target_bufs);
+
+    // return std::apply(
+    //     [&](auto&... source_buf) {
+    //       return std::apply(
+    //           [&](auto&... target_buf) {
+    //             return std::apply(
+    //                 [&](const auto&&... op) {
+    //                   return std::make_tuple(
+    //                       invoke_operation(graph, op, source_buf, target_buf)...);
+    //                 },
+    //                 operations);
+    //           },
+    //           target_bufs);
+    //     },
+    //     source_bufs);
+
+    
   }
 
   template <Graph_type Graph_t, Operation_type... Op>

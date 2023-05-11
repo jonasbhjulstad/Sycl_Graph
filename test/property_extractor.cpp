@@ -71,10 +71,10 @@ int main() {
   };
 
   auto print_vec = [&](const auto& vec, const auto& name) {
-    if (vec.has_value()) {
+    if (!std::is_same_v<decltype(vec.value()[0]), Sycl_Graph::Sycl::Operation_Buffer_Void_t>) {
       std::cout << "op for " << name << " edges" << std::endl;
-      for (const auto& v : vec.value) {
-        if () std::cout << v << ",";
+      for (const auto& v : vec.value()) {
+        std::cout << v << ",";
       }
       std::cout << std::endl;
     }
@@ -83,16 +83,16 @@ int main() {
 
   std::cout << "Degrees" << std::endl;
 
-  std::apply(
-      [&](auto&&... name) {
-        std::apply(
-            [&](auto&&... args) {
-              // ((std::cout << "Property " << n++ << std::endl), printvecpair(args), ...);
-              (print_vec(args, name), ...);
-            },
-            std::get<1>(properties));
-      },
-      edge_type_names);
+  // std::apply(
+  //     [&](auto&&... name) {
+  //       std::apply(
+  //           [&](auto&&... args) {
+  //             // ((std::cout << "Property " << n++ << std::endl), printvecpair(args), ...);
+  //             (print_vec(args, name), ...);
+  //           },
+  //           std::get<1>(properties));
+  //     },
+  //     edge_type_names);
 
   // Sycl_Graph::Sycl::Undirected_Vertex_Degree_Op i_f_op_undirected(iv_buf, fv_buf, i_f_e_buf);
   // Sycl_Graph::Sycl::Undirected_Vertex_Degree_Op f_i_op_undirected(fv_buf, iv_buf, f_i_e_buf);

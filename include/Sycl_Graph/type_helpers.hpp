@@ -308,5 +308,42 @@ namespace Sycl_Graph {
     (std::make_index_sequence<N>{});
   }
 
-}  // namespace Sycl_Graph
+  template <std::size_t S, class... Ts> constexpr auto make_indices() {
+    constexpr std::size_t sizes[] = {std::tuple_size_v<std::remove_reference_t<Ts>>...};
+    using arr_t = std::array<std::size_t, S>;
+    std::pair<arr_t, arr_t> ret{};
+    for (std::size_t c = 0, i = 0; i < sizeof...(Ts); ++i)
+      for (std::size_t j = 0; j < sizes[i]; ++j, ++c) {
+        ret.first[c] = i;
+        ret.second[c] = j;
+      }
+    return ret;
+  }
+
+  template <class F, class... Tuples, std::size_t... OuterIs, std::size_t... InnerIs>
+  constexpr decltype(auto) multi_apply_imp_2(std::index_sequence<OuterIs...>,
+                                             std::index_sequence<InnerIs...>, F &&f,
+                                             std::tuple<Tuples...> &&t) {
+    return std::forward<F>(f)(std::get<InnerIs>(std::get<OuterIs>(std::move(t)))...);
+  }
+
+  template <class F, class... Tuples, std::size_t... Is>
+  constexpr decltype(auto) multi_apply_imp_1(std::index_sequence<Is...>, F &&f,
+                                             std::tuple<Tuples...> &&t) {
+    constexpr auto indices = make_indices<sizeof...(Is), Tuples...>();
+    return multi_apply_imp_2(std::index_sequence<indices.first[Is]...>{},
+                             std::index_sequence<indices.second[Is]...>{}, std::forward<F>(f),
+                             std::move(t));
+  }
+
+  template <typename F, class... Tuples> constexpr decltype(auto) multi_apply(F &&f, Tuples &&...ts) {
+    constexpr std::size_t flat_s = (0U + ... + std::tuple_size_v<std::remove_reference_t<Tuples>>);
+    if constexpr (flat_s != 0)
+      return multi_apply_imp_1(std::make_index_sequence<flat_s>{}, std::forward<F>(f),
+                               std::forward_as_tuple(std::forward<Tuples>(ts)...));
+    else
+      return std::forward<F>(f)();
+  }
+
+  }
 #endif
