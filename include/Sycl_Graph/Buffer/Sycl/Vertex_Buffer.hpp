@@ -96,6 +96,7 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
     return vertices;
   }
 
+
   template <sycl::access_mode Mode>
   Vertex_Accessor<Mode, Vertex_t> get_access(sycl::handler& h)
   {

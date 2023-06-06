@@ -11,6 +11,8 @@
 namespace Sycl_Graph::Sycl
 {
 
+
+    //Buffer accessor contains one sentinel/dummy element
     template <sycl::access::mode Mode, typename... Ds>
     struct Buffer_Accessor
     {
@@ -29,7 +31,8 @@ namespace Sycl_Graph::Sycl
 
         size_t size() const
         {
-            return std::get<0>(accessors).size();
+            // - 1 accounts for dummy element
+            return std::get<0>(accessors).size() - 1;
         }
 
         std::tuple<Ds...> get_idx(sycl::id<1> i) const
@@ -124,19 +127,6 @@ namespace Sycl_Graph::Sycl
             buffer_resize(bufs, q, new_size);
             curr_size = std::min(curr_size, new_size);
         }
-
-        // template <typename Target_t>
-        // void assign_add(const std::tuple<std::vector<Ds> ...>& data)
-        // {
-        //     auto N_added = buffer_assign_add<Target_t, uI_t, Ds ...>(bufs, q, data, curr_size);
-        //     curr_size += N_added;
-        // }
-
-        // template <typename Target_t>
-        // void assign_add(const std::vector<Ds>& ... data)
-        // {
-        //     this->assign_add<Target_t>(std::make_tuple(data ...));
-        // }
 
         void add(const std::tuple<std::vector<Ds>...>& data)
         {

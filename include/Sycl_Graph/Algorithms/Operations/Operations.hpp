@@ -2,9 +2,9 @@
 #define SYCL_GRAPH_ALGORITHMS_PROPERTIES_SYCL_PROPERTY_EXTRACTOR_HPP
 
 #include <CL/sycl.hpp>
-#include <Sycl_Graph/Algorithms/Operations/Edge_Operations.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Operation_Buffers.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Operation_Types.hpp>
+#include <Sycl_Graph/Algorithms/Operations/Edge_Operations.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Vertex_Operations.hpp>
 #include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
@@ -33,25 +33,28 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_transform(Graph_t& graph, Op& operation, auto source_buf,
-                               auto target_buf, sycl::event dep_event = {}) {
-    return graph.q.submit({[&](sycl::handler& h) {
+  sycl::event invoke_transform(Graph_t& graph, Op& operation, const auto& source_buf,
+                               auto& target_buf, sycl::event dep_event = {}) {
+    return graph.q.submit([&](sycl::handler& h) {
+      h.depends_on(dep_event);
       auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
       auto target_acc = target_buf->template get_access<Op::target_access_mode>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
-      operation(accessors, source_acc, target_acc, h);
-    }});
+
+      operation._invoke(accessors, source_acc, target_acc, h);
+    });
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_injection(Graph_t& graph, Op& operation, auto source_buf,
+  sycl::event invoke_injection(Graph_t& graph, Op& operation, auto& source_buf,
                                sycl::event dep_event = {}) {
     static_assert(has_Source_v<Op> && !has_Target_v<Op>);
-    return graph.q.submit({[&](sycl::handler& h) {
+    return graph.q.submit([&](sycl::handler& h) {
+      h.depends_on(dep_event);
       auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
-      operation(accessors, source_acc, h);
-    }});
+      operation._invoke(accessors, source_acc, h);
+    });
   }
 
   template <Graph_type Graph_t, Operation_type Op>
@@ -60,6 +63,7 @@ namespace Sycl_Graph::Sycl {
     static_assert(has_Target_v<Op> && !has_Source_v<Op>);
 
     return graph.q.submit([&](sycl::handler& h) {
+      h.depends_on(dep_event);
       auto target_acc = target_buf->template get_access<Op::target_access_mode>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
       operation._invoke(accessors, target_acc, h);
@@ -70,14 +74,15 @@ namespace Sycl_Graph::Sycl {
   sycl::event invoke_inplace_modification(Graph_t& graph, Op& operation,
                                           sycl::event dep_event = {}) {
     return graph.q.submit({[&](sycl::handler& h) {
+      h.depends_on(dep_event);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
-      operation(accessors, h);
+      operation._invoke(accessors, h);
     }});
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_operation(Graph_t& G, Op& operation, auto source_buf,
-                               auto target_buf) {
+  sycl::event invoke_operation(Graph_t& G, Op& operation, auto& source_buf,
+                               auto& target_buf) {
     if constexpr (has_Source_v<Op> && has_Target_v<Op>) {
       return invoke_transform(G, operation, source_buf, target_buf);
     } else if constexpr (has_Source_v<Op> && !has_Target_v<Op>) {

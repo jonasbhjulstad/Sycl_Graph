@@ -101,6 +101,7 @@ namespace Sycl_Graph
       return edge_buf.get_edges();
     }
 
+
   };
 
   template <typename T>

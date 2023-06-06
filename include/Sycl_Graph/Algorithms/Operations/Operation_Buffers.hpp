@@ -10,7 +10,7 @@ namespace Sycl_Graph::Sycl {
     if constexpr (has_Source_v<Op> && !std::is_same_v<Buf_Prev_t, std::shared_ptr<void>>) {
       return target_buf_prev;
     } else if constexpr (has_Source_v<Op>) {
-      return std::make_shared(sycl::buffer<typename Op::Source_t>(op.source_buffer_size(G)));
+      return std::make_shared<sycl::buffer<typename Op::Source_t>>(sycl::buffer<typename Op::Source_t>(op.source_buffer_size(G)));
     } else {
       return std::shared_ptr<sycl::buffer<Operation_Buffer_Void_t>>{};
     }

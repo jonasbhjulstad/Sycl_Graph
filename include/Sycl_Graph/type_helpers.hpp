@@ -345,5 +345,6 @@ namespace Sycl_Graph {
       return std::forward<F>(f)();
   }
 
+
   }
 #endif

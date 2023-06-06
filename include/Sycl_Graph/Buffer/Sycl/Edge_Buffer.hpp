@@ -74,14 +74,17 @@ struct Edge_Buffer: public Buffer<_uI_t, typename _Edge_t::Connection_IDs, typen
 
   std::vector<Edge_t> get_edges()
   {
-    auto edge_tuple = this->template get<Connection_IDs, Data_t>();
-    std::vector<Edge_t> edges;
-    edges.reserve(edge_tuple.first.size());
-    for (size_t i = 0; i < edge_tuple.first.size(); i++)
-    {
-        edges.push_back(Edge_t(edge_tuple.first[i], edge_tuple.second[i]));
-    }
-    return edges;
+    std::vector<Edge_t> result(this->current_size());
+    auto result_buf = sycl::buffer<Edge_t>(result.data(), result.size());
+
+    this->q.submit([&](sycl::handler& h){
+      auto acc = this->template get_access<sycl::access_mode::read>(h);
+      auto result_acc = result_buf.template get_access<sycl::access_mode::write>(h);
+      h.parallel_for(sycl::range<1>(this->current_size()), [=](sycl::id<1> idx){
+        result_acc[idx] = acc[idx];
+      });
+    }).wait();
+    return result;
   }
 
   void remove(const std::vector<Connection_IDs>& ids)

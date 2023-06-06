@@ -9,6 +9,7 @@ namespace Sycl_Graph {
     
     typedef typename std::tuple_element_t<0, std::tuple<Bs...>>::uI_t uI_t;
     typedef std::tuple<Bs...> Buffer_t;
+    typedef std::tuple<typename Bs::Data_t...> Data_t;
     static constexpr uI_t N_buffers = sizeof...(Bs);
     Buffer_Pack() = default;
     Buffer_Pack(const Bs &...buffers) : buffers(std::make_tuple(buffers...)) {}
@@ -31,6 +32,11 @@ namespace Sycl_Graph {
 
     auto size() const {
       return std::apply([](auto &&...buffers) { return (buffers.size() + ...); }, buffers);
+    }
+
+
+    template <typename D> auto &get_buffer(const uI_t &id) const {
+      return get_buffer<D>().get_buffer(id);
     }
 
     template <typename D> auto size() const { return get_buffer<D>().size(); }

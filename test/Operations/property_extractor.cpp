@@ -59,10 +59,8 @@ int main() {
   std::tuple<std::string, std::string, std::string> edge_type_names
       = std::make_tuple("integer-float", "float-integer", "integer-integer");
 
-  // auto ops = std::make_tuple(i_f_op_in, i_f_op_out);//, f_i_op_in, f_i_op_out);
   auto ops = std::make_tuple(i_f_op, f_i_op, i_i_op);
   q.wait();
-  // auto properties = Sycl_Graph::Sycl::apply_single_operations(graph, ops);
 
   auto properties = Sycl_Graph::Sycl::apply_single_operations(graph, ops);
 

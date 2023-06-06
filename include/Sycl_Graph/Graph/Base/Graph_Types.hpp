@@ -16,6 +16,7 @@ namespace Sycl_Graph {
     typedef _ID_t ID_t;
     static constexpr ID_t invalid_id = _invalid_id;
     typedef D Data_t;
+    Vertex() = default;
 
     Vertex(ID_t id, const D& data) : id(id), data(data) {}
     ID_t id = invalid_id;
@@ -79,6 +80,8 @@ namespace Sycl_Graph {
     }
 
     bool is_valid() const { return from != invalid_id && to != invalid_id; }
+
+
   };
 
   enum Edge_Direction_t : uint8_t {
@@ -94,6 +97,7 @@ namespace Sycl_Graph {
                         typename T::ID_t;
                         T::invalid_id;
                       };
+  typedef Edge<void> ID_Edge_t;
 
   template <typename T> constexpr bool is_Edge_type = Edge_type<T>;
 

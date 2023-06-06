@@ -4,7 +4,6 @@
 #include <Sycl_Graph/Buffer/Sycl/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Base/Buffer_Pack.hpp>
 
-
 namespace Sycl_Graph::Sycl
 {
     template <Sycl_Graph::Sycl::Buffer_type ... Bs>
@@ -16,6 +15,8 @@ namespace Sycl_Graph::Sycl
         typedef typename Base_t::Buffer_t Buffer_t;
         using Base_t::get_buffer;
         using Base_t::Base_t;
+
+
 
         template <sycl::access_mode Mode, typename Buffer_t>
         auto get_access(sycl::handler &h)

@@ -1,0 +1,3 @@
+add_custom_executable(operation_buffers)
+add_custom_executable(operation_tests)
+add_custom_executable(property_extractor)

@@ -23,13 +23,13 @@ CPMFindPackage(
 )
 include(FindThreads)
 
-option(TRACY_ENABLE "" ON)
-option (TRACY_ON_DEMAND "" ON)
-CPMFindPackage(
-    NAME Tracy
-    GITHUB_REPOSITORY wolfpld/tracy
-    GIT_TAG master
-)
+# option(TRACY_ENABLE "" ON)
+# option (TRACY_ON_DEMAND "" ON)
+# CPMFindPackage(
+#     NAME Tracy
+#     GITHUB_REPOSITORY wolfpld/tracy
+#     GIT_TAG master
+# )
 
 find_package(oneDPL REQUIRED)
 

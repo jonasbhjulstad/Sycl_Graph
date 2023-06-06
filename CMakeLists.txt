@@ -33,7 +33,7 @@ file(GLOB_RECURSE SYCL_GRAPH_HEADER_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
 add_library(${PROJECT_NAME} INTERFACE ${SYCL_GRAPH_HEADER_FILES})
 target_include_directories(${PROJECT_NAME} INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
-target_link_libraries(${PROJECT_NAME} INTERFACE Tracy::TracyClient)
+# target_link_libraries(${PROJECT_NAME} INTERFACE Tracy::TracyClient)
 target_link_libraries(${PROJECT_NAME} INTERFACE cppitertools::cppitertools oneDPL)
 target_compile_options(${PROJECT_NAME} INTERFACE ${DEFAULT_WARNING_FLAGS})
 

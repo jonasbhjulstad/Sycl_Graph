@@ -8,50 +8,51 @@
 namespace Sycl_Graph::Epidemiological {
   using namespace Sycl_Graph::Sycl;
 
-
-  template <Sycl_Graph::Vertex_Buffer_type Vertex_Buffer_t> struct SIR_Vertex_Recovery_Op
-      : public Vertex_Extract_Operation<Vertex_Buffer_t, SIR_Vertex_Recovery_Op<Vertex_Buffer_t>> {
+  template <Sycl_Graph::Vertex_Buffer_type Vertex_Buffer_t> struct SIR_Individual_Recovery_Op
+      : public Vertex_Extract_Operation<Vertex_Buffer_t,
+                                        SIR_Individual_Recovery_Op<Vertex_Buffer_t>> {
     typedef SIR_Individual_State_t Target_t;
     typedef typename Vertex_Buffer_t::Vertex_t Vertex_t;
-    
-    typedef SIR_Individual_State_t Target_t;
 
     float p_R = 0.0f;
-    SIR_Vertex_Recovery_Op(const Vertex_Buffer_t& buf, float p_R = 0.0f) : p_R(p_R) {}
+    SIR_Individual_Recovery_Op(const Vertex_Buffer_t& buf, float p_R = 0.0f) : p_R(p_R) {}
 
     void invoke(const auto& v_acc, auto& result_acc, sycl::handler& h) const {
-      if (direction == Degree_Direction_From) {
-        h.parallel_for(v_acc.size(), [=](sycl::id<1> id) {
-          Static_RNG::default_rng rng(id);
-          Static_RNG::bernoulli_distribution<float> dist(p_R);
-          result_acc[id] = dist(rng) ? SIR_Individual_R : v_acc[id];
-        });
-      }
+      const float p_R = this->p_R;
+      h.parallel_for(v_acc.size(), [=](sycl::id<1> id) {
+        Static_RNG::default_rng rng(id);
+        Static_RNG::bernoulli_distribution<float> dist(p_R);
+        result_acc[id] = dist(rng) ? SIR_INDIVIDUAL_R : v_acc.data[id];
+      });
     }
-    template <Graph_type Graph_t> size_t target_buffer_size(const Graph_t& G) const {
-      return G.vertex_buf.template get_buffer<Vertex_Buffer_t>().current_size();
+    template <typename Graph_t> size_t target_buffer_size(const Graph_t& G) const {
+      return G.template current_size<typename Vertex_Buffer_t::Vertex_t>();
     }
   };
 
-
-  //Individual Infection Op: Chained with Individual Recovery Op as an inplace operation
+  // Individual Infection Op: Chained with Individual Recovery Op as an inplace operation
+  template <Sycl_Graph::Sycl::Edge_Buffer_type Edge_Buffer_t,
+            Sycl_Graph::Sycl::Vertex_Buffer_type Vertex_Buffer_t>
   struct SIR_Individual_Infection_Op
-      : public Edge_Transform_Operation<SIR_Individual_Infection_Op> {
-    using Base_t = Edge_Transform_Operation<SIR_Individual_Infection_Op>;
+      : public Edge_Transform_Operation<
+            Edge_Buffer_t, SIR_Individual_Infection_Op<Edge_Buffer_t, Vertex_Buffer_t>> {
+    using Base_t
+        = Edge_Transform_Operation<Edge_Buffer_t,
+                                   SIR_Individual_Infection_Op<Edge_Buffer_t, Vertex_Buffer_t>>;
     static constexpr sycl::access::mode target_access_mode = sycl::access::mode::atomic;
     typedef SIR_Individual_State_t Target_t;
     typedef SIR_Individual_State_t Source_t;
+    typedef typename Vertex_Buffer_t::Vertex_t Vertex_t;
     sycl::buffer<uint32_t>& seeds;
     float p_I = 0.0f;
-    SIR_Individual_Infection_Op(const Vertex_Buffer_From_t&, const Vertex_Buffer_To_t&,
-                                const Edge_Buffer_t& edge_buf, sycl::buffer<uint32_t>& seeds,
-                                float p_I = 0.0f)
+    SIR_Individual_Infection_Op(const Edge_Buffer_t& edge_buf, Vertex_Buffer_t&,
+                                sycl::buffer<uint32_t>& seeds, float p_I = 0.0f)
         : seeds(seeds), p_I(p_I) {
       assert(seeds.size() >= edge_buf.current_size() && "seeds buffer too small");
     }
 
-    void invoke(const auto& edge_acc, const auto& from_acc, const auto& to_acc,
-                    auto& result_acc, sycl::handler& h) const {
+    void invoke(const auto& edge_acc, const auto& from_acc, const auto& to_acc, auto& result_acc,
+                sycl::handler& h) const {
       h.parallel_for(edge_acc.size(), [=](sycl::id<1> id) {
         auto id_from = edge_acc[id].from;
         auto id_to = edge_acc[id].to;
@@ -69,13 +70,67 @@ namespace Sycl_Graph::Epidemiological {
         }
       });
     }
-    template <Graph_type Graph_t> size_t target_buffer_size(const Graph_t& G) const {
-      return G.vertex_buf.template get_buffer<Vertex_Buffer_To_t>().current_size();
+    template <typename Graph_t> size_t target_buffer_size(const Graph_t& G) const {
+      return G.template current_size<Vertex_t>();
     }
 
-    template <Graph_type Graph_t> size_t source_buffer_size(const Graph_t& G) const {
-      return G.vertex_buf.template get_buffer<Vertex_Buffer_To_t>().current_size();
+    template <typename Graph_t> size_t source_buffer_size(const Graph_t& G) const {
+      return G.template current_size<Vertex_t>();
     }
+  };
+
+  // Individual Infection Op: Chained with Individual Recovery Op as an inplace operation
+  struct SIR_Individual_Population_Count_Extract_Op
+      : public Vertex_Extract_Operation<SIR_Individual_Vertex_Buffer_t,
+                                        SIR_Individual_Population_Count_Extract_Op> {
+    using Base_t = Vertex_Extract_Operation<SIR_Individual_Vertex_Buffer_t,
+                                            SIR_Individual_Population_Count_Extract_Op>;
+    static constexpr sycl::access::mode target_access_mode = sycl::access::mode::write;
+    typedef uint32_t Target_t;
+
+    void invoke(const auto& v_acc, auto& target_acc, sycl::handler& h) const {
+      h.single_task([=]() {
+        target_acc[0] = 0;
+        target_acc[1] = 0;
+        target_acc[2] = 0;
+        for (int i = 0; i < v_acc.size(); i++) {
+          if (v_acc.data[i] == SIR_INDIVIDUAL_S) {
+            target_acc[0]++;
+          } else if (v_acc.data[i] == SIR_INDIVIDUAL_I) {
+            target_acc[1]++;
+          } else if (v_acc.data[i] == SIR_INDIVIDUAL_R) {
+            target_acc[2]++;
+          }
+        }
+      });
+    }
+    template <typename Graph_t> size_t target_buffer_size(const Graph_t& G) const { return 3; }
+  };
+
+  struct SIR_Individual_Population_Count_Transform_Op
+      : public Transform_Operation<SIR_Individual_Population_Count_Transform_Op> {
+    using Base_t = Transform_Operation<SIR_Individual_Population_Count_Transform_Op>;
+    static constexpr sycl::access::mode target_access_mode = sycl::access::mode::write;
+    typedef uint32_t Target_t;
+    typedef SIR_Individual_State_t Source_t;
+
+    void invoke(const auto& source_acc, auto& target_acc, sycl::handler& h) const {
+      h.single_task([=]() {
+        target_acc[0] = 0;
+        target_acc[1] = 0;
+        target_acc[2] = 0;
+        for (auto i = 0; i < source_acc.size(); i++) {
+          if (source_acc[i] == SIR_INDIVIDUAL_S) {
+            target_acc[0]++;
+          } else if (source_acc[i] == SIR_INDIVIDUAL_I) {
+            target_acc[1]++;
+          } else if (source_acc[i] == SIR_INDIVIDUAL_R) {
+            target_acc[2]++;
+          }
+        }
+      });
+    }
+    template <typename Graph_t> size_t target_buffer_size(const Graph_t& G) const { return 3; }
   };
 
 }  // namespace Sycl_Graph::Epidemiological

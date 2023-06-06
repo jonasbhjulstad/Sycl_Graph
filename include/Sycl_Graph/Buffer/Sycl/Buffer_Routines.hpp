@@ -184,6 +184,20 @@ namespace Sycl_Graph {
   }
 
   template <typename T, std::unsigned_integral uI_t = uint32_t>
+  std::vector<T> buffer_get(sycl::buffer<T>& buf, sycl::queue& q)
+  {
+    auto res = std::vector<T>(buf.size());
+    auto res_buf = sycl::buffer<T,1>(res.data(), sycl::range<1>(res.size()));
+    q.submit([&](sycl::handler& h) {
+      auto buf_acc = buf.template get_access<sycl::access::mode::read>(h);
+      auto res_acc = res_buf.template get_access<sycl::access::mode::write>(h);
+      h.parallel_for(buf.size(), [=](sycl::id<1> i) { res_acc[i] = buf_acc[i]; });
+    }).wait();
+
+    return res;
+  }
+
+  template <typename T, std::unsigned_integral uI_t = uint32_t>
   std::vector<T> buffer_get(sycl::buffer<T, 1> &buf, sycl::queue &q,
                             const std::vector<uI_t> &indices) {
     auto condition = [&indices](auto i) {

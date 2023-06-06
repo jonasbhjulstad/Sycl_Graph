@@ -36,7 +36,6 @@ namespace Sycl_Graph::Sycl {
   template <typename T>
   concept has_Source = requires(T op) {
     typename T::Source_t;
-    T::source_buffer_size;
   };
 
   template <typename T>
@@ -53,6 +52,22 @@ namespace Sycl_Graph::Sycl {
 
   struct Operation_Buffer_Void_t{char dummy;};
 
+
+  template <typename Derived>
+  struct Transform_Operation {
+    typedef std::tuple<> Accessor_Types;
+    static constexpr std::tuple<> graph_access_modes;
+    static constexpr sycl::access_mode target_access_mode = sycl::access_mode::write;
+    void _invoke(const auto&, const auto& source_acc, auto& target_acc, sycl::handler& h) const {
+      static_cast<const Derived*>(this)->invoke(source_acc, target_acc, h);
+    }
+
+    template <typename Graph_t> size_t target_buffer_size(const Graph_t& G) const {
+      return static_cast<const Derived*>(this)->target_buffer_size(G);
+    }
+  };
+
+  
 
 }  // namespace Sycl_Graph::Sycl
 
