@@ -55,13 +55,17 @@ int main() {
   Sycl_Graph::Sycl::Directed_Vertex_Degree_Op i_f_op(i_f_e_buf);
   Sycl_Graph::Sycl::Directed_Vertex_Degree_Op f_i_op(f_i_e_buf);
   Sycl_Graph::Sycl::Directed_Vertex_Degree_Op i_i_op(i_i_e_buf);
+
   std::tuple<std::string, std::string, std::string> edge_type_names
       = std::make_tuple("integer-float", "float-integer", "integer-integer");
 
   // auto ops = std::make_tuple(i_f_op_in, i_f_op_out);//, f_i_op_in, f_i_op_out);
   auto ops = std::make_tuple(i_f_op, f_i_op, i_i_op);
   q.wait();
+  // auto properties = Sycl_Graph::Sycl::apply_single_operations(graph, ops);
+
   auto properties = Sycl_Graph::Sycl::apply_single_operations(graph, ops);
+
   auto printvecpair = [&](const auto& vec, const std::string name) {
     std::cout << "op for " << name << " edges" << std::endl;
     for (const auto& v : vec) {
@@ -79,41 +83,6 @@ int main() {
       std::cout << std::endl;
     }
   };
-  uint32_t n = 0;
-
-  std::cout << "Degrees" << std::endl;
-
-  // std::apply(
-  //     [&](auto&&... name) {
-  //       std::apply(
-  //           [&](auto&&... args) {
-  //             // ((std::cout << "Property " << n++ << std::endl), printvecpair(args), ...);
-  //             (print_vec(args, name), ...);
-  //           },
-  //           std::get<1>(properties));
-  //     },
-  //     edge_type_names);
-
-  // Sycl_Graph::Sycl::Undirected_Vertex_Degree_Op i_f_op_undirected(iv_buf, fv_buf, i_f_e_buf);
-  // Sycl_Graph::Sycl::Undirected_Vertex_Degree_Op f_i_op_undirected(fv_buf, iv_buf, f_i_e_buf);
-  // Sycl_Graph::Sycl::Undirected_Vertex_Degree_Op i_i_op_undirected(iv_buf, iv_buf, i_i_e_buf);
-
-  // auto ops_undirected = std::make_tuple(i_f_op_undirected, f_i_op_undirected, i_i_op_undirected);
-
-  // auto properties_undirected = Sycl_Graph::Sycl::apply_single_operations(graph, ops_undirected);
-  // auto printvecpair_undirected = [&](const auto& vec, const std::string name) {
-  //     std::cout << "op for " << name << " edges" << std::endl;
-  //     for (const auto& v : vec) {
-  //         std::cout << v << std::endl;
-  //     }
-  //     std::cout << std::endl;
-  // };
-
-  // std::apply([&](auto&&... name){
-  // std::apply([&](auto&&... args) {
-  //     // ((std::cout << "Property " << n++ << std::endl), printvecpair(args), ...);
-  //     (printvecpair_undirected(args, name), ...);
-  // }, properties_undirected);}, edge_type_names);
 
   return 0;
 }

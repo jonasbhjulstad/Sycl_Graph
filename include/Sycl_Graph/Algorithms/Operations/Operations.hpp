@@ -33,7 +33,7 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_transform(Graph_t& graph, const Op& operation, auto source_buf,
+  sycl::event invoke_transform(Graph_t& graph, Op& operation, auto source_buf,
                                auto target_buf, sycl::event dep_event = {}) {
     return graph.q.submit({[&](sycl::handler& h) {
       auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
@@ -44,8 +44,9 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_injection(Graph_t& graph, const Op& operation, auto source_buf,
+  sycl::event invoke_injection(Graph_t& graph, Op& operation, auto source_buf,
                                sycl::event dep_event = {}) {
+    static_assert(has_Source_v<Op> && !has_Target_v<Op>);
     return graph.q.submit({[&](sycl::handler& h) {
       auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
@@ -54,8 +55,10 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_extraction(Graph_t& graph, const Op& operation,
-                                auto target_buf, sycl::event dep_event = {}) {
+  sycl::event invoke_extraction(Graph_t& graph, Op& operation, auto& target_buf,
+                                sycl::event dep_event = {}) {
+    static_assert(has_Target_v<Op> && !has_Source_v<Op>);
+
     return graph.q.submit([&](sycl::handler& h) {
       auto target_acc = target_buf->template get_access<Op::target_access_mode>(h);
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
@@ -64,7 +67,7 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_inplace_modification(Graph_t& graph, const Op& operation,
+  sycl::event invoke_inplace_modification(Graph_t& graph, Op& operation,
                                           sycl::event dep_event = {}) {
     return graph.q.submit({[&](sycl::handler& h) {
       auto accessors = get_graph_accessors<Graph_t, Op>(graph, h);
@@ -73,52 +76,51 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <Graph_type Graph_t, Operation_type Op>
-  sycl::event invoke_operation(const Graph_t& G, const Op& operation, auto source_buf, auto target_buf)
-  {
-    if constexpr(has_Source_v<Op> && has_Target_v<Op>) {
+  sycl::event invoke_operation(Graph_t& G, Op& operation, auto source_buf,
+                               auto target_buf) {
+    if constexpr (has_Source_v<Op> && has_Target_v<Op>) {
       return invoke_transform(G, operation, source_buf, target_buf);
-    } else if constexpr(has_Source_v<Op> && !has_Target_v<Op>) {
+    } else if constexpr (has_Source_v<Op> && !has_Target_v<Op>) {
       return invoke_injection(G, operation, source_buf);
-    } else if constexpr(!has_Source_v<Op> && has_Target_v<Op>) {
+    } else if constexpr (!has_Source_v<Op> && has_Target_v<Op>) {
       return invoke_extraction(G, operation, target_buf);
-    } else if constexpr(!has_Source_v<Op> && !has_Target_v<Op>) {
+    } else if constexpr (!has_Source_v<Op> && !has_Target_v<Op>) {
       return invoke_inplace_modification(G, operation);
     }
     return {};
   }
 
-  template <Graph_type Graph_t, Operation_type... Op, tuple_like Source_Bufs_t, tuple_like Target_Bufs_t>
-  auto invoke_operations(Graph_t& graph, const std::tuple<Op...>& operations,
-                         Source_Bufs_t& source_bufs,
-                         Target_Bufs_t& target_bufs) {
-
+  template <Graph_type Graph_t, Operation_type... Op, tuple_like Source_Bufs_t,
+            tuple_like Target_Bufs_t>
+  auto invoke_operations(Graph_t& graph, std::tuple<Op...>& operations,
+                         Source_Bufs_t& source_bufs, Target_Bufs_t& target_bufs) {
     auto test = std::tuple_cat(source_bufs, target_bufs);
 
-    //assert that size of source_bufs and target_bufs is the same
+    static_assert(!std::is_same_v<decltype(std::get<0>(target_bufs)),
+                                  std::shared_ptr<sycl::buffer<Operation_Buffer_Void_t>>>);
+
+    // assert that size of source_bufs and target_bufs is the same
     static_assert(std::tuple_size_v<Source_Bufs_t> == std::tuple_size_v<Target_Bufs_t>);
 
-    // multi_apply(invoke_operation<Graph_t, , operations, source_bufs, target_bufs);
-
+    // apply over operations, source_bufs and target_bufs
     return std::apply(
-        [&](auto&... source_buf) {
+        [&](auto&... ops) {
           return std::apply(
-              [&](auto&... target_buf) {
+              [&](auto&&... target_buf) {
                 return std::apply(
-                    [&](const auto&&... op) {
+                    [&](auto&&... source_buf) {
                       return std::make_tuple(
-                          invoke_operation(graph, op, source_buf, target_buf)...);
+                          invoke_operation(graph, ops, source_buf, target_buf)...);
                     },
-                    operations);
+                    source_bufs);
               },
               target_bufs);
         },
-        source_bufs);
-
-    
+        operations);
   }
 
   template <Graph_type Graph_t, Operation_type... Op>
-  auto apply_single_operations(Graph_t& G, const std::tuple<Op...>& operations) {
+  auto apply_single_operations(Graph_t& G, std::tuple<Op...>& operations) {
     auto [source_bufs, target_bufs] = create_operation_buffers(G, operations);
     auto events = invoke_operations(G, operations, source_bufs, target_bufs);
     G.q.wait();

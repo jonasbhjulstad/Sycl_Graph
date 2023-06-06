@@ -45,7 +45,7 @@ namespace Sycl_Graph::Sycl {
   template <typename T>
   concept has_Target = requires(T op) {
     typename T::Target_t;
-    T::target_buffer_size;
+    //check that method target_buffer_size exists
   };
 
   template <typename T>
