@@ -1,1 +1,2 @@
 add_custom_executable(SIR_Individual_Step)
+target_link_libraries(SIR_Individual_Step PUBLIC Epidemiological)

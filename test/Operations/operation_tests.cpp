@@ -5,17 +5,15 @@
 #include <Sycl_Graph/Graph/Base/Graph.hpp>
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
 #include <iostream>
-using namespace Sycl_Graph;
-using namespace Sycl_Graph::Sycl;
-typedef Sycl_Graph::Vertex<float> fVertex_t;
-typedef Sycl_Graph::Vertex<int> iVertex_t;
-typedef Sycl_Graph::Vertex<double> dVertex_t;
-typedef Sycl_Graph::Edge<uint32_t> u32Edge_t;
-typedef Sycl_Graph::Edge<uint32_t, iVertex_t, fVertex_t> i_f_edge_t;
-typedef Sycl_Graph::Edge<uint32_t, fVertex_t, iVertex_t> f_i_edge_t;
-typedef Sycl_Graph::Edge<uint32_t, iVertex_t, iVertex_t> i_i_edge_t;
+typedef Vertex<float> fVertex_t;
+typedef Vertex<int> iVertex_t;
+typedef Vertex<double> dVertex_t;
+typedef Edge<uint32_t> u32Edge_t;
+typedef Edge<uint32_t, iVertex_t, fVertex_t> i_f_edge_t;
+typedef Edge<uint32_t, fVertex_t, iVertex_t> f_i_edge_t;
+typedef Edge<uint32_t, iVertex_t, iVertex_t> i_i_edge_t;
 
-template <Sycl_Graph::Edge_Buffer_type Edge_Buffer_t> struct Square_Extract_Op
+template <Edge_Buffer_type Edge_Buffer_t> struct Square_Extract_Op
     : public Edge_Extract_Operation<Edge_Buffer_t, Square_Extract_Op<Edge_Buffer_t>>
 
 {
@@ -43,7 +41,7 @@ template <Sycl_Graph::Edge_Buffer_type Edge_Buffer_t> struct Square_Extract_Op
   }
 };
 
-template <Sycl_Graph::Edge_Buffer_type Edge_Buffer_t> struct Square_Transform_Op
+template <Edge_Buffer_type Edge_Buffer_t> struct Square_Transform_Op
     : public Transform_Operation<Square_Transform_Op<Edge_Buffer_t>> {
   typedef uint32_t Target_t;
   typedef uint32_t Source_t;
@@ -65,7 +63,7 @@ template <Sycl_Graph::Edge_Buffer_type Edge_Buffer_t> struct Square_Transform_Op
     return G.template current_size<typename Edge_Buffer_t::Edge_t>();
   }
 };
-template <Sycl_Graph::Edge_Buffer_type Edge_Buffer_t> struct Square_Inject_Op
+template <Edge_Buffer_type Edge_Buffer_t> struct Square_Inject_Op
     : public Edge_Inject_Operation<Edge_Buffer_t, Square_Inject_Op<Edge_Buffer_t>> {
   using Base_t = Edge_Inject_Operation<Edge_Buffer_t, Square_Inject_Op<Edge_Buffer_t>>;
   using Base_t::Base_t;
@@ -108,16 +106,16 @@ int main() {
       = {i_i_edge_t(1, 2, 10),
          i_i_edge_t(1, 2, 10)};  // i_i_edge_t(1, 2), i_i_edge_t(2, 3), i_i_edge_t(3, 2)};
 
-  Sycl_Graph::Sycl::Vertex_Buffer fv_buf(q, fvertices);
-  Sycl_Graph::Sycl::Vertex_Buffer iv_buf(q, ivertices);
-  Sycl_Graph::Sycl::Edge_Buffer i_f_e_buf(q, i_f_edges);
-  Sycl_Graph::Sycl::Edge_Buffer f_i_e_buf(q, f_i_edges);
-  Sycl_Graph::Sycl::Edge_Buffer i_i_e_buf(q, i_i_edges);
+  Sycl::Vertex_Buffer fv_buf(q, fvertices);
+  Sycl::Vertex_Buffer iv_buf(q, ivertices);
+  Sycl::Edge_Buffer i_f_e_buf(q, i_f_edges);
+  Sycl::Edge_Buffer f_i_e_buf(q, f_i_edges);
+  Sycl::Edge_Buffer i_i_e_buf(q, i_i_edges);
 
   q.wait();
-  Sycl_Graph::Buffer_Pack vertex_buffer(fv_buf, iv_buf);
-  Sycl_Graph::Buffer_Pack edge_buffer(i_f_e_buf, f_i_e_buf, i_i_e_buf);
-  Sycl_Graph::Sycl::Graph graph(vertex_buffer, edge_buffer, q);
+  Buffer_Pack vertex_buffer(fv_buf, iv_buf);
+  Buffer_Pack edge_buffer(i_f_e_buf, f_i_e_buf, i_i_e_buf);
+  Sycl::Graph graph(vertex_buffer, edge_buffer, q);
 
   std::cout << "Graph has " << graph.N_vertices() << " vertices and " << graph.N_edges()
             << " edges." << std::endl;
@@ -132,8 +130,8 @@ int main() {
   auto ops = std::make_tuple(i_f_extract, f_transform, i_f_inject);
   q.wait();
 
-  auto i_f_target = Sycl_Graph::Sycl::create_target_buffer(graph, i_f_extract);
-  auto i_f_source = Sycl_Graph::Sycl::create_source_buffer(graph, i_f_inject);
+  auto i_f_target = Sycl::create_target_buffer(graph, i_f_extract);
+  auto i_f_source = Sycl::create_source_buffer(graph, i_f_inject);
 
   assert(i_f_target->size() == i_f_source->size());
   assert(i_f_target->size() == i_f_edges.size());

@@ -1,18 +1,17 @@
-#include <Sycl_Graph/Buffer/Sycl/Edge_Buffer.hpp>
-#include <Sycl_Graph/Buffer/Sycl/Vertex_Buffer.hpp>
-#include <Sycl_Graph/Algorithms/Generation/Base/Graph_Generation.hpp>
-#include <Sycl_Graph/Epidemiological/Epidemiological.hpp>
-#include <Sycl_Graph/Graph/Base/Graph.hpp>
-#include <Sycl_Graph/Graph/Sycl/Graph.hpp>
+
+import Sycl.Graph;
+import Sycl.Buffer.Vertex;
+import Sycl.Buffer.Edge;
+import Epidemiological;
+import Base.Graph.Generation;
 #include <iostream>
 #include <random>
-using namespace Sycl_Graph::Epidemiological;
 
 auto generate_nodes_edges(uint32_t N_pop, float p_ER, uint32_t seed) {
   std::vector<uint32_t> node_ids(N_pop);
   std::iota(node_ids.begin(), node_ids.end(), 0);
   std::vector<SIR_Individual_Infection_Edge_t> links
-      = Sycl_Graph::random_connect<SIR_Individual_Infection_Edge_t>(node_ids, node_ids, p_ER, false, seed);
+      = random_connect<SIR_Individual_Infection_Edge_t>(node_ids, node_ids, p_ER, false, seed);
   // generate initial infections with p_I0
   float p_I0 = 0.1f;
   // initialize mt
@@ -50,9 +49,9 @@ int main() {
   SIR_Individual_Edge_Buffer_t e_buf(q, links);
   SIR_Individual_Vertex_Buffer_t v_buf(q, nodes);
 
-  Sycl_Graph::Buffer_Pack vertex_buffer(v_buf);
-  Sycl_Graph::Buffer_Pack edge_buffer(e_buf);
-  Sycl_Graph::Sycl::Graph graph(vertex_buffer, edge_buffer, q);
+  Buffer_Pack vertex_buffer(v_buf);
+  Buffer_Pack edge_buffer(e_buf);
+  Sycl::Graph graph(vertex_buffer, edge_buffer, q);
 
   std::cout << "Graph has " << graph.N_vertices() << " vertices and " << graph.N_edges()
             << " edges." << std::endl;
@@ -80,9 +79,9 @@ int main() {
 
   inf_pop_event.wait();
 
-  auto init_pop = Sycl_Graph::buffer_get(initial_pop_buf);
-  auto rec_pop = Sycl_Graph::buffer_get(rec_pop_buf);
-  auto inf_pop = Sycl_Graph::buffer_get(inf_pop_buf);
+  auto init_pop = buffer_get(initial_pop_buf);
+  auto rec_pop = buffer_get(rec_pop_buf);
+  auto inf_pop = buffer_get(inf_pop_buf);
   q.wait();
 
   // print pop bufs
