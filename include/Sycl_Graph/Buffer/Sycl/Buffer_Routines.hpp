@@ -56,9 +56,9 @@ namespace Sycl_Graph {
   }
 
   template <typename... Ts>
-  void buffer_resize(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, size_t new_size) {
+  sycl::event buffer_resize(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, size_t new_size) {
     std::tuple<sycl::buffer<Ts, 1>...> new_bufs = std::make_tuple(sycl::buffer<Ts, 1>(new_size)...);
-    q.submit([&](sycl::handler &h) {
+    auto event = q.submit([&](sycl::handler &h) {
       auto src_accs = std::make_tuple(
           std::get<sycl::buffer<Ts, 1>>(bufs).template get_access<sycl::access::mode::read>(h)...);
       auto dest_accs = std::make_tuple(
@@ -74,6 +74,7 @@ namespace Sycl_Graph {
     });
 
     bufs = new_bufs;
+    return event;
   }
 
   template <typename T>
@@ -117,12 +118,19 @@ namespace Sycl_Graph {
     if (bufsize == 0) {
       return;
     }
-
+    sycl::event resize_event;
     if (bufsize < offset + std::get<0>(src_bufs).size()) {
-      buffer_resize(dest_bufs, q, bufsize + std::get<0>(src_bufs).size());
+      resize_event = buffer_resize(dest_bufs, q, bufsize + std::get<0>(src_bufs).size());
     }
+    //get buffer sizes
+    auto dest_buf_sizes = std::apply(
+        [&](auto &...dest_bufs) { return std::make_tuple(dest_bufs.size()...); }, dest_bufs);
+    auto src_buf_sizes = std::apply(
+        [&](auto &...src_bufs) { return std::make_tuple(src_bufs.size()...); }, src_bufs);
+
 
     q.submit([&](sycl::handler &h) {
+      h.depends_on(resize_event);
       auto dest_accs = std::apply(
           [&](auto &...dest_bufs) {
             return std::make_tuple(dest_bufs.template get_access<sycl::access::mode::write>(h)...);

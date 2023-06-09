@@ -39,7 +39,7 @@ namespace Sycl_Graph::Epidemiological {
     using Base_t
         = Edge_Transform_Operation<Edge_Buffer_t,
                                    SIR_Individual_Infection_Op<Edge_Buffer_t, Vertex_Buffer_t>>;
-    static constexpr sycl::access::mode target_access_mode = sycl::access::mode::atomic;
+    static constexpr sycl::access::mode target_access_mode = sycl::access::mode::write;
     typedef SIR_Individual_State_t Target_t;
     typedef SIR_Individual_State_t Source_t;
     typedef typename Vertex_Buffer_t::Vertex_t Vertex_t;
@@ -51,20 +51,20 @@ namespace Sycl_Graph::Epidemiological {
       assert(seeds.size() >= edge_buf.current_size() && "seeds buffer too small");
     }
 
-    void invoke(const auto& edge_acc, const auto& from_acc, const auto& to_acc, auto& result_acc,
+    void invoke(const auto& edge_acc, const auto& from_acc, const auto& to_acc, const auto& source_acc, auto& target_acc,
                 sycl::handler& h) const {
-      h.parallel_for(edge_acc.size(), [=](sycl::id<1> id) {
+      h.parallel_for(edge_acc.size(), [=, this](sycl::id<1> id) {
         auto id_from = edge_acc[id].from;
         auto id_to = edge_acc[id].to;
         auto seed_acc = seeds.get_access<sycl::access::mode::read_write>();
-        if (edge_acc[id].is_valid() && (from_acc[id_from] == SIR_INDIVIDUAL_I)
-            && (to_acc[id_to] == SIR_INDIVIDUAL_S)) {
+        if (edge_acc[id].is_valid() && (from_acc.data[id_from] == SIR_INDIVIDUAL_I)
+            && (to_acc.data[id_to] == SIR_INDIVIDUAL_S)) {
           Static_RNG::default_rng rng(seed_acc[id]);
           seed_acc[id]++;
-          auto p_I = edge_acc[id].data.p_I;
+          auto p_I = edge_acc[id].data;
           Static_RNG::bernoulli_distribution<float> dist(p_I);
           if (dist(rng)) {
-            to_acc[id_to] = SIR_INDIVIDUAL_I;
+            target_acc[id_to] = SIR_INDIVIDUAL_I;
           }
           seed_acc[id]++;
         }
