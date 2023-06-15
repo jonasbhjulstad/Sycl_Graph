@@ -14,8 +14,23 @@ typedef Sycl_Graph::Edge<fEdge_t, iVertex_t, fVertex_t> i_f_edge_t;
 typedef Sycl_Graph::Edge<fEdge_t, fVertex_t, iVertex_t> f_i_edge_t;
 typedef Sycl_Graph::Edge<fEdge_t, iVertex_t, iVertex_t> i_i_edge_t;
 
+void printAvailableGPUs()
+{
+std::vector<sycl::device> devices = sycl::device::get_devices();
+  for (const auto& device : devices)
+  {
+    std::cout << "Device: " << device.get_info<sycl::info::device::name>() << std::endl;
+  }
+}
+
+
 int main() {
+  printAvailableGPUs();
   sycl::queue q(sycl::gpu_selector_v);
+
+  //currently selected GPU:
+std::cout << "Selected device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
+
 
   std::vector<fVertex_t> fvertices
       = {fVertex_t{0, 0.0f}, fVertex_t{1, 1.0f}, fVertex_t{2, 2.0f}, fVertex_t{3, 3.0f}};

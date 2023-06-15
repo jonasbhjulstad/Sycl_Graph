@@ -1,16 +1,24 @@
 include(cmake/CPM.cmake)
+list(APPEND CMAKE_PREFIX_PATH /usr/local/lib/cmake)
+find_package(Static_RNG REQUIRED)
+# if (NOT ${STATIC_RNG_FOUND})
 
-CPMFindPackage(
-    NAME Static_RNG
-    GITHUB_REPOSITORY jonasbhjulstad/Static_RNG
-    GIT_TAG master
-    OPTIONS
-    STATIC_RNG_ENABLE_SYCL ON
-    BUILD_PYTHON_BINDERS OFF
-    BUILD_DOCS OFF
-)
+# CPMFindPackage(
+#     NAME Static_RNG
+#     GITHUB_REPOSITORY jonasbhjulstad/Static_RNG
+#     GIT_TAG master
+#     OPTIONS
+#     STATIC_RNG_ENABLE_SYCL ON
+#     BUILD_PYTHON_BINDERS OFF
+#     BUILD_DOCS OFF
+# )
+# endif()
+add_compile_options("-fsycl")
+find_package(IntelSYCL REQUIRED)
 
-find_package(IntelDPCPP REQUIRED)
+CPMFindPackage(NAME metal
+GITHUB_REPOSITORY brunocodutra/metal
+GIT_TAG master)
 
 
 set(cppitertools_INSTALL_CMAKE_DIR share)
@@ -35,7 +43,7 @@ find_package(oneDPL REQUIRED)
 
 # CPMFindPackage(NAME etl
 #     GITHUB_REPOSITORY  ETLCPP/etl
-#     GIT_TAG master    
+#     GIT_TAG master
 # )
 
 # CPMFindPackage(NAME Metal

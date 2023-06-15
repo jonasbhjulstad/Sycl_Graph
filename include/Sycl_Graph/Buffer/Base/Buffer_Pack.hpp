@@ -4,13 +4,13 @@
 #include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
 #include <tuple>
 namespace Sycl_Graph {
-  template <Sycl_Graph::Buffer_type... Bs> struct Buffer_Pack 
+  template <Sycl_Graph::Buffer_type... Bs> struct Buffer_Pack
   {
-    
-    typedef typename std::tuple_element_t<0, std::tuple<Bs...>>::uI_t uI_t;
+
+    typedef typename std::tuple_element_t<0, std::tuple<Bs...>>::uint32_t uint32_t;
     typedef std::tuple<Bs...> Buffer_t;
     typedef std::tuple<typename Bs::Data_t...> Data_t;
-    static constexpr uI_t N_buffers = sizeof...(Bs);
+    static constexpr uint32_t N_buffers = sizeof...(Bs);
     Buffer_Pack() = default;
     Buffer_Pack(const Bs &...buffers) : buffers(std::make_tuple(buffers...)) {}
     Buffer_Pack(const Bs &&...buffers) : buffers(std::make_tuple(buffers...)) {}
@@ -20,7 +20,7 @@ namespace Sycl_Graph {
     typedef Buffer_Pack<Bs...> This_t;
     Buffer_t buffers;
 
-    static constexpr uI_t invalid_id = std::numeric_limits<uI_t>::max();
+    static constexpr uint32_t invalid_id = std::numeric_limits<uint32_t>::max();
 
     template <typename T> static constexpr bool is_Buffer_type = has_type<T, Buffer_t>::value;
     template <typename T> static constexpr bool is_Data_type = (has_type<T, typename Bs::Data_t>::value && ...);
@@ -35,7 +35,7 @@ namespace Sycl_Graph {
     }
 
 
-    template <typename D> auto &get_buffer(const uI_t &id) const {
+    template <typename D> auto &get_buffer(const uint32_t &id) const {
       return get_buffer<D>().get_buffer(id);
     }
 
@@ -67,15 +67,15 @@ namespace Sycl_Graph {
       return *this;
     }
 
-    template <typename D> void resize(const uI_t &size) { get_buffer<D>().resize(size); }
+    template <typename D> void resize(const uint32_t &size) { get_buffer<D>().resize(size); }
 
-    template <typename D> uI_t current_size() const { return get_buffer<D>().current_size(); }
+    template <typename D> uint32_t current_size() const { return get_buffer<D>().current_size(); }
 
-    uI_t current_size() const {
+    uint32_t current_size() const {
       return std::apply([](auto... args) { return (args.current_size() + ...); }, buffers);
     }
 
-    template <typename D> uI_t max_size() const { return get_buffer<D>().max_size(); }
+    template <typename D> uint32_t max_size() const { return get_buffer<D>().max_size(); }
   };
 
   template <typename T>

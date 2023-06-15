@@ -15,7 +15,7 @@ struct Vertex_Accessor: public Buffer_Accessor<Mode, typename Vertex_t::ID_t, ty
   typedef typename Vertex_t::Data_t Data_t;
   typedef Buffer_Accessor<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t> Base_t;
   Vertex_Accessor(Base_t&& base): Base_t(base) {}
-  
+
 
   sycl::accessor<ID_t, 1, Mode>  ids = std::get<0>(this->accessors);
   sycl::accessor<Data_t, 1, Mode> data = std::get<1>(this->accessors);
@@ -27,21 +27,20 @@ struct Vertex_Accessor: public Buffer_Accessor<Mode, typename Vertex_t::ID_t, ty
 };
 
 
-template <Sycl_Graph::Vertex_type _Vertex_t,
-          std::unsigned_integral _uI_t = uint32_t>
-struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
+template <Sycl_Graph::Vertex_type _Vertex_t>
+struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t,
                                      typename _Vertex_t::Data_t> {
 
-  typedef Buffer<_uI_t, typename _Vertex_t::ID_t,
+  typedef Buffer<typename _Vertex_t::ID_t,
                                      typename _Vertex_t::Data_t> Base_t;
   typedef _Vertex_t Vertex_t;
   typedef typename Base_t::Data_t Data_t;
   typedef typename Vertex_t::ID_t ID_t;
   typedef typename Vertex_t::Data_t Vertex_Data_t;
-  typedef _uI_t uI_t;
+  typedef uint32_t uint32_t;
 
   sycl::queue &q = Base_t::q;
-  Vertex_Buffer(sycl::queue &q, uI_t NV = 1, const sycl::property_list &props = {})
+  Vertex_Buffer(sycl::queue &q, uint32_t NV = 1, const sycl::property_list &props = {})
       : Base_t(q, NV, props) {}
 
   Vertex_Buffer(sycl::queue &q, const std::vector<ID_t> &ids,
@@ -79,11 +78,15 @@ struct Vertex_Buffer : public Buffer<_uI_t, typename _Vertex_t::ID_t,
       ids.push_back(v.id);
       data.push_back(v.data);
     }
+    using Buffer_ID_t = std::tuple_element_t<0, typename Base_t::Data_t>;
+    using Buffer_Data_t = std::tuple_element_t<1, typename Base_t::Data_t>;
+    static_assert(std::is_same_v<Buffer_ID_t, typename Vertex_t::ID_t> && "ID type mismatch between entry and buffer");
+    static_assert(std::is_same_v<Buffer_Data_t, typename Vertex_t::Data_t> && "Data type mismatch between entry and buffer");
     auto tup = std::make_tuple(ids, data);
     static_cast<Base_t*>(this)->add(tup);
   }
 
-  uI_t N_vertices() const { return this->current_size(); }
+  uint32_t N_vertices() const { return this->current_size(); }
 
   std::vector<Vertex_t> get_vertices() {
     auto Vertex_tuple = this->template get<ID_t, Data_t>();

@@ -65,7 +65,7 @@ namespace Sycl_Graph::Sycl
     };
 
 
-    template <std::unsigned_integral uI_t, typename... Ds>
+    template <typename... Ds>
     struct Buffer
     {
         typedef std::tuple<Ds...> Data_t;
@@ -73,16 +73,16 @@ namespace Sycl_Graph::Sycl
         static constexpr std::array<size_t, N_buffers> buffer_type_sizes = {sizeof(Ds)...};
         sycl::queue &q;
         std::tuple<sycl::buffer<Ds, 1>...> bufs;
-        uI_t curr_size = 0;
+        uint32_t curr_size = 0;
 
-        Buffer(sycl::queue &q, uI_t N, const sycl::property_list &props = {})
-            : bufs(sycl::buffer<Ds, 1>(sycl::range<1>(std::max<uI_t>(N, 1)), props)...), q(q){}
+        Buffer(sycl::queue &q, uint32_t N, const sycl::property_list &props = {})
+            : bufs(sycl::buffer<Ds, 1>(sycl::range<1>(std::max<uint32_t>(N, 1)), props)...), q(q){}
 
         Buffer(sycl::queue &q, const std::vector<Ds>& ... data,
                const sycl::property_list &props = {})
             : bufs(sycl::buffer<Ds, 1>(data, props)...), q(q), curr_size(std::get<0>(data ...).size()){}
 
-        uI_t current_size() const { return curr_size; }
+        uint32_t current_size() const { return curr_size; }
 
         template <typename T>
         static constexpr bool is_Data_type = (std::is_same_v<T, Ds> || ...);
@@ -105,7 +105,7 @@ namespace Sycl_Graph::Sycl
         // returns a buffer accessor with only the specified types
         template <sycl::access::mode Mode, typename... D_subset> requires is_Data_types<D_subset...>
         auto get_access(sycl::handler &h)
-        {   
+        {
             return Buffer_Accessor<Mode, D_subset...>(std::get<sycl::buffer<D_subset,1>>(bufs) ..., h);
         }
 
@@ -122,7 +122,7 @@ namespace Sycl_Graph::Sycl
             return std::get<sycl::buffer<D, 1>>(bufs);
         }
 
-        void resize(uI_t new_size)
+        void resize(uint32_t new_size)
         {
             buffer_resize(bufs, q, new_size);
             curr_size = std::min(curr_size, new_size);
@@ -139,12 +139,12 @@ namespace Sycl_Graph::Sycl
             buffer_assign(bufs, data..., q);
         }
 
-        std::tuple<std::vector<Ds>...> get(uI_t offset, uI_t size)
+        std::tuple<std::vector<Ds>...> get(uint32_t offset, uint32_t size)
         {
             return buffer_get(bufs, q, offset, size);
         }
 
-        std::tuple<std::vector<Ds>...> get(const std::vector<uI_t> &indices)
+        std::tuple<std::vector<Ds>...> get(const std::vector<uint32_t> &indices)
         {
             return buffer_get(bufs, q, indices);
         }
@@ -161,41 +161,41 @@ namespace Sycl_Graph::Sycl
             curr_size -= N_removed;
         }
 
-        void remove_elements(uI_t offset, uI_t size)
+        void remove_elements(uint32_t offset, uint32_t size)
         {
             auto N_removed = buffer_remove(bufs, q, offset, size);
             curr_size -= N_removed;
         }
 
-        void remove_elements(const std::vector<uI_t> &indices)
+        void remove_elements(const std::vector<uint32_t> &indices)
         {
             auto N_removed = buffer_remove(bufs, q, indices);
             curr_size -= N_removed;
         }
 
-        Buffer<uI_t, Ds...> &operator=(const Buffer<uI_t, Ds...> &other)
+        Buffer<Ds...> &operator=(const Buffer<Ds...> &other)
         {
             bufs = other.bufs;
             return *this;
         }
 
-        Buffer<uI_t, Ds...> &operator+(const Buffer<uI_t, Ds...> &other)
+        Buffer<Ds...> &operator+(const Buffer<Ds...> &other)
         {
             buffer_combine(bufs, other.bufs, q);
             return *this;
         }
 
-        uI_t current_size()
+        uint32_t current_size()
         {
             return curr_size;
         }
 
-        uI_t max_size() const
+        uint32_t max_size() const
         {
             return std::get<0>(bufs).size();
         }
 
-        uI_t byte_size() const
+        uint32_t byte_size() const
         {
             return std::accumulate(buffer_type_sizes.begin(), buffer_type_sizes.end(), 0) * max_size();
         }

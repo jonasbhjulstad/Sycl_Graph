@@ -16,8 +16,23 @@ inline constexpr bool sycl::is_device_copyable_v<Foo> = true;
 
 int main()
 {
+    //get all gpu devices
+    auto devices = sycl::device::get_devices(sycl::info::device_type::gpu);
+
+    //print them
+for(auto& device : devices)
+    {
+        std::cout << device.get_info<sycl::info::device::name>() << "\n";
+    }
+
     //create sycl queue
-    sycl::queue q;
+    sycl::queue q(devices[1]);
+    //print selected device
+
+    //create sycl queue
+    // sycl::queue q(sycl::gpu_selector_v);
+    //print selected device
+std::cout << "Running on " << q.get_device().get_info<sycl::info::device::name>() << "\n";
     //create a Foo
     Foo a;
     //create sycl buffer for a

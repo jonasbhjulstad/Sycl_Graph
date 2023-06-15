@@ -17,30 +17,27 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
       "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
   )
 endif()
+add_compile_options(-fsycl)
+add_link_options(-fsycl)
 set(SYCL_GRAPH_CUDA_FLAGS -fsycl-targets=nvptx64-nvidia-cuda)
-option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" OFF)
-include(cmake/external_packages.cmake)
+option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" ON)
+include(${PROJECT_SOURCE_DIR}/cmake/external_packages.cmake)
 set(SYCL_GRAPH_CLANG_BINARY_DIR "${IntelDPCPP_DIR}/../bin-llvm/clang++" CACHE STRING "Path to OneAPI clang/clang++ directory")
 set(CMAKE_COLOR_MAKEFILE ON)
-include(cmake/custom_executable.cmake)
-include(cmake/ccache.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/custom_executable.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/custom_library.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/ccache.cmake)
 # ---- Add source files ----
+add_compile_options(-Wfatal-errors)
 add_compile_options(-Wdeprecated-declarations)
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
 file(GLOB_RECURSE SYCL_GRAPH_HEADER_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
 # ---- Create library ----
-add_library(${PROJECT_NAME} INTERFACE ${SYCL_GRAPH_HEADER_FILES})
-target_include_directories(${PROJECT_NAME} INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")
+add_custom_interface_library(Sycl_Graph)
+add_subdirectory(src)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
-# target_link_libraries(${PROJECT_NAME} INTERFACE Tracy::TracyClient)
-target_link_libraries(${PROJECT_NAME} INTERFACE cppitertools::cppitertools oneDPL)
-target_compile_options(${PROJECT_NAME} INTERFACE ${DEFAULT_WARNING_FLAGS})
 
-# Note: for header-only libraries change all PUBLIC flags to INTERFACE and create an interface
-# target: add_library(${PROJECT_NAME} INTERFACE)
-
-# being a cross-platform target, we enforce standards conformance on MSVC
 target_compile_options(${PROJECT_NAME} INTERFACE "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 target_include_directories(
@@ -72,5 +69,3 @@ packageProject(
   COMPATIBILITY SameMajorVersion
   DEPENDENCIES ""
 )
-
-

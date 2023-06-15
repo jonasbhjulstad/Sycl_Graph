@@ -10,11 +10,13 @@
 #include <vector>
 namespace Sycl_Graph {
 
-  template <typename D, typename _ID_t = uint32_t,
-            _ID_t _invalid_id = std::numeric_limits<_ID_t>::max()>
-  struct Vertex {
-    typedef _ID_t ID_t;
-    static constexpr ID_t invalid_id = _invalid_id;
+  template <typename ... Ts>
+  struct Vertex;
+
+  template <typename D>
+  struct Vertex<D> {
+    typedef uint32_t ID_t;
+    static constexpr ID_t invalid_id = std::numeric_limits<uint32_t>::max();
     typedef D Data_t;
     Vertex() = default;
 
@@ -39,12 +41,11 @@ namespace Sycl_Graph {
 
   template <typename T> constexpr bool is_Vertex_type = Vertex_type<T>;
 
-  template <typename _ID_t = uint32_t, _ID_t _invalid_id = std::numeric_limits<_ID_t>::max()>
   struct Connection_ID_Pair {
-    typedef _ID_t ID_t;
-    _ID_t from = invalid_id;
-    _ID_t to = invalid_id;
-    static constexpr ID_t invalid_id = _invalid_id;
+    typedef uint32_t ID_t;
+    static constexpr ID_t invalid_id = std::numeric_limits<uint32_t>::max();
+    ID_t from = invalid_id;
+    ID_t to = invalid_id;
 
     bool is_valid() const { return to != invalid_id && from != invalid_id; }
 
@@ -52,9 +53,13 @@ namespace Sycl_Graph {
       return to == other.to && from == other.from;
     }
   };
-  template <typename D, typename _From_t = void, typename _To_t = void,
-            typename _Connection_IDs = Connection_ID_Pair<>>
-  struct Edge {
+
+  template <typename ... Ts>
+  struct Edge;
+
+  template <typename D, Vertex_type _From_t, Vertex_type _To_t,
+            typename _Connection_IDs>
+  struct Edge<D, _From_t, _To_t, _Connection_IDs> {
     typedef D Data_t;
     typedef _From_t From_t;
     typedef _To_t To_t;
@@ -80,8 +85,6 @@ namespace Sycl_Graph {
     }
 
     bool is_valid() const { return from != invalid_id && to != invalid_id; }
-
-
   };
 
   enum Edge_Direction_t : uint8_t {

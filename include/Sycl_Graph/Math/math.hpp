@@ -10,8 +10,8 @@
 namespace Sycl_Graph
 {
 
-    template <typename T, std::unsigned_integral uI_t = uint32_t>
-    std::vector<T> linspace(T min, T max, uI_t N) {
+    template <typename T>
+    std::vector<T> linspace(T min, T max, uint32_t N) {
         std::vector<T> res(N);
         for (int i = 0; i < N; i++) {
             res[i] = min + (max - min) * i / (N - 1);
@@ -19,8 +19,7 @@ namespace Sycl_Graph
         return res;
     }
 
-    template <std::unsigned_integral T>
-    constexpr T n_choose_k(T n, T k)
+    constexpr auto n_choose_k(std::unsigned_integral auto n, std::unsigned_integral auto k)
     {
         return (k == 0) ? 1 : (n * n_choose_k(n - 1, k - 1)) / k;
     }

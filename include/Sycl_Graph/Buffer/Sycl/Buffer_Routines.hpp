@@ -90,9 +90,9 @@ namespace Sycl_Graph {
     });
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
+  template <typename T>
   void buffer_add(sycl::buffer<T, 1> &dest_buf, sycl::buffer<T, 1> src_buf, sycl::queue &q,
-                  uI_t offset = 0) {
+                  uint32_t offset = 0) {
     if (src_buf.size() == 0) {
       return;
     }
@@ -109,9 +109,9 @@ namespace Sycl_Graph {
     }
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
+  template <typename... Ts>
   void buffer_add(std::tuple<sycl::buffer<Ts, 1>...> &dest_bufs,
-                  std::tuple<sycl::buffer<Ts, 1>...> &src_bufs, sycl::queue &q, uI_t offset = 0) {
+                  std::tuple<sycl::buffer<Ts, 1>...> &src_bufs, sycl::queue &q, uint32_t offset = 0) {
     auto bufsize = std::get<0>(dest_bufs).size();
     static_assert(std::conjunction_v<std::bool_constant<(sizeof(Ts) != 0)>...>,
                   "All buffer types must have non-zero size.");
@@ -152,9 +152,9 @@ namespace Sycl_Graph {
     });
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
+  template <typename... Ts>
   void buffer_add(std::tuple<sycl::buffer<Ts, 1>...> &dest_bufs,
-                  const std::tuple<std::vector<Ts>...> &src_vecs, sycl::queue &q, uI_t offset = 0) {
+                  const std::tuple<std::vector<Ts>...> &src_vecs, sycl::queue &q, uint32_t offset = 0) {
     // create buffers for src_vecs
     auto src_bufs = std::apply(
         [&](auto &...src_vecs) {
@@ -165,23 +165,23 @@ namespace Sycl_Graph {
     buffer_add(dest_bufs, src_bufs, q, offset);
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
+  template <typename T>
   inline void buffer_add(std::vector<sycl::buffer<T, 1> &> &bufs,
                          const std::vector<const std::vector<T> &> &vecs, sycl::queue &q,
-                         const std::vector<uI_t> &offsets) {
-    for (uI_t i = 0; i < vecs.size(); ++i) {
+                         const std::vector<uint32_t> &offsets) {
+    for (uint32_t i = 0; i < vecs.size(); ++i) {
       buffer_add(bufs[i], vecs[i], q, offsets[i]);
     }
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
+  template <typename T>
   void buffer_add(sycl::buffer<T> &buf, const std::vector<T> &data, sycl::queue &q,
-                  uI_t offset = 0) {
+                  uint32_t offset = 0) {
     sycl::buffer<T> tmp_buf(data.data(), sycl::range<1>(data.size()));
     buffer_add(buf, tmp_buf, q, offset);
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
+  template <typename T>
   std::vector<T> buffer_get(sycl::buffer<T> &buf) {
     auto buf_acc = buf.get_host_access();
     std::vector<T> res(buf.size());
@@ -191,7 +191,7 @@ namespace Sycl_Graph {
     return res;
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
+  template <typename T>
   std::vector<T> buffer_get(sycl::buffer<T>& buf, sycl::queue& q)
   {
     auto res = std::vector<T>(buf.size());
@@ -205,28 +205,28 @@ namespace Sycl_Graph {
     return res;
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
+  template <typename T>
   std::vector<T> buffer_get(sycl::buffer<T, 1> &buf, sycl::queue &q,
-                            const std::vector<uI_t> &indices) {
+                            const std::vector<uint32_t> &indices) {
     auto condition = [&indices](auto i) {
       return std::find(indices.begin(), indices.end(), i) != indices.end();
     };
     return buffer_get(buf, q, condition);
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
+  template <typename... Ts>
   std::tuple<std::vector<Ts>...> buffer_get(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
-                                            sycl::queue &q, uI_t offset = 0, uI_t size = 0) {
+                                            sycl::queue &q, uint32_t offset = 0, uint32_t size = 0) {
     return std::make_tuple(buffer_get(std::get<sycl::buffer<Ts, 1>>(bufs), q, offset, size)...);
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
+  template <typename... Ts>
   std::tuple<std::vector<Ts>...> buffer_get(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
-                                            sycl::queue &q, const std::vector<uI_t> &indices) {
+                                            sycl::queue &q, const std::vector<uint32_t> &indices) {
     return std::make_tuple(buffer_get(std::get<sycl::buffer<Ts, 1>>(bufs), q, indices)...);
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
+  template <typename... Ts>
   std::tuple<std::vector<Ts>...> buffer_get(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
                                             sycl::queue &q, auto condition) {
     return std::make_tuple(buffer_get(std::get<sycl::buffer<Ts, 1>>(bufs), q, condition)...);
@@ -241,11 +241,11 @@ namespace Sycl_Graph {
     return std::apply([&](auto &&...buf) { return std::make_tuple(buffer_get(buf)...); }, bufs);
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
-  std::vector<uI_t> buffer_get_indices(sycl::buffer<T, 1> &buf, sycl::queue &q,
-                                       bool (*condition)(uI_t)) {
-    std::vector<uI_t> res(buf.size());
-    sycl::buffer<uI_t, 1> res_buf(res.data(), sycl::range<1>(buf.size()));
+  template <typename T>
+  std::vector<uint32_t> buffer_get_indices(sycl::buffer<T, 1> &buf, sycl::queue &q,
+                                       bool (*condition)(uint32_t)) {
+    std::vector<uint32_t> res(buf.size());
+    sycl::buffer<uint32_t, 1> res_buf(res.data(), sycl::range<1>(buf.size()));
     q.submit([&](sycl::handler &h) {
       auto acc = buf.template get_access<sycl::access::mode::read>(h);
       auto res_acc = res_buf.template get_access<sycl::access::mode::write>(h);
@@ -259,13 +259,13 @@ namespace Sycl_Graph {
     return res;
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
-  std::vector<uI_t> buffer_get_indices(sycl::buffer<T, 1> &buf, sycl::queue &q,
+  template <typename T>
+  std::vector<uint32_t> buffer_get_indices(sycl::buffer<T, 1> &buf, sycl::queue &q,
                                        const std::vector<T> &elements) {
     if (buf.size() > 0) {
-      std::vector<uI_t> res(elements.size(), std::numeric_limits<uI_t>::max());
+      std::vector<uint32_t> res(elements.size(), std::numeric_limits<uint32_t>::max());
       sycl::buffer<T, 1> elements_buf(elements.data(), sycl::range<1>(elements.size()));
-      sycl::buffer<uI_t, 1> res_buf(res.data(), sycl::range<1>(elements.size()));
+      sycl::buffer<uint32_t, 1> res_buf(res.data(), sycl::range<1>(elements.size()));
       auto event = q.submit([&](sycl::handler &h) {
         auto acc = buf.template get_access<sycl::access::mode::read>(h);
         auto elements_acc = elements_buf.template get_access<sycl::access::mode::read>(h);
@@ -285,16 +285,16 @@ namespace Sycl_Graph {
       for (auto i = 0; i < res.size(); i++) {
         res[i] = res_acc[i];
       }
-      std::erase_if(res, [](uI_t i) { return i == std::numeric_limits<uI_t>::max(); });
+      std::erase_if(res, [](uint32_t i) { return i == std::numeric_limits<uint32_t>::max(); });
 
       return res;
     }
     return {};
   }
 
-  template <std::unsigned_integral uI_t = uint32_t, typename... Ts>
+  template <typename... Ts>
   void buffer_assign(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                     const std::vector<uI_t> &indices, const std::tuple<std::vector<Ts>...> &vecs) {
+                     const std::vector<uint32_t> &indices, const std::tuple<std::vector<Ts>...> &vecs) {
     const auto buf_size = std::get<0>(bufs).size();
     auto src_bufs = std::apply(
         [&](const auto &...vecs) {
@@ -302,7 +302,7 @@ namespace Sycl_Graph {
               (sycl::buffer<Ts, 1>(vecs.data(), sycl::range<1>(vecs.size())))...);
         },
         vecs);
-    sycl::buffer<uI_t, 1> indices_buf(indices.data(), sycl::range<1>(indices.size()));
+    sycl::buffer<uint32_t, 1> indices_buf(indices.data(), sycl::range<1>(indices.size()));
     q.submit([&](sycl::handler &h) {
       auto dest_accs = std::make_tuple(
           std::get<sycl::buffer<Ts, 1>>(bufs).template get_access<sycl::access::mode::read_write>(
@@ -323,7 +323,7 @@ namespace Sycl_Graph {
     });
   }
 
-  template <typename Target_t, std::unsigned_integral uI_t = uint32_t, typename... Ts>
+  template <typename Target_t, typename... Ts>
   void buffer_assign(const std::vector<Target_t> &target, std::tuple<sycl::buffer<Ts, 1>...> &bufs,
                      sycl::queue &q, const std::vector<Ts> &...vecs) {
     sycl::buffer<Target_t, 1> target_buf(target.data(), sycl::range<1>(target.size()));
@@ -331,12 +331,12 @@ namespace Sycl_Graph {
     buffer_assign(bufs, q, indices, vecs...);
   }
 
-  template <std::unsigned_integral uI_t = uint32_t, typename... Ts>
-  uI_t buffer_assign_add(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                         const std::vector<uI_t> &indices,
+  template <typename... Ts>
+  uint32_t buffer_assign_add(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
+                         const std::vector<uint32_t> &indices,
                          const std::tuple<std::vector<Ts>...> &vecs,
-                         uI_t N_max = std::numeric_limits<uI_t>::max()) {
-    const auto buf_size = std::min<uI_t>(std::get<0>(bufs).size(), N_max);
+                         uint32_t N_max = std::numeric_limits<uint32_t>::max()) {
+    const auto buf_size = std::min<uint32_t>(std::get<0>(bufs).size(), N_max);
     if (buf_size > 0 && indices.size() > 0) {
       buffer_assign(bufs, q, indices, vecs);
       buffer_print(bufs, q);
@@ -365,23 +365,23 @@ namespace Sycl_Graph {
     });
   }
 
-  template <typename Target_t, std::unsigned_integral uI_t = uint32_t, typename... Ts>
-  uI_t buffer_assign_add(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
+  template <typename Target_t, typename... Ts>
+  uint32_t buffer_assign_add(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
                          const std::tuple<std::vector<Ts>...> &vecs,
-                         uI_t N_max = std::numeric_limits<uI_t>::max()) {
+                         uint32_t N_max = std::numeric_limits<uint32_t>::max()) {
     const auto &target = std::get<std::vector<Target_t>>(vecs);
-    std::vector<uI_t> indices;
+    std::vector<uint32_t> indices;
     if (std::get<0>(bufs).size() > 0) {
       indices = buffer_get_indices(std::get<sycl::buffer<Target_t, 1>>(bufs), q, target);
     }
     // auto target_buffers = tuple_filter<sycl::buffer<Bs, 1> ...>::template filter<sycl::buffer<Ts,
     // 1> ...>(bufs);
-    return buffer_assign_add<uI_t, Ts...>(bufs, q, indices, vecs, N_max);
+    return buffer_assign_add<uint32_t, Ts...>(bufs, q, indices, vecs, N_max);
   }
 
   // removes elements at offset to offset+size
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
-  void buffer_remove(sycl::buffer<T, 1> &buf, sycl::queue &q, uI_t offset = 0, uI_t size = 0) {
+  template <typename T>
+  void buffer_remove(sycl::buffer<T, 1> &buf, sycl::queue &q, uint32_t offset = 0, uint32_t size = 0) {
     if (size == 0) {
       size = buf.size();
     }
@@ -393,17 +393,17 @@ namespace Sycl_Graph {
     }
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
-  void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, uI_t offset = 0,
-                     uI_t size = 0) {
+  template <typename... Ts>
+  void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, uint32_t offset = 0,
+                     uint32_t size = 0) {
     (buffer_remove(std::get<sycl::buffer<Ts, 1>>(bufs), q, offset, size), ...);
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
+  template <typename... Ts>
   void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                     const std::vector<uI_t> &indices,
-                     uI_t N_max = std::numeric_limits<uI_t>::max()) {
-    const auto buf_size = std::min<uI_t>(std::get<0>(bufs).size(), N_max);
+                     const std::vector<uint32_t> &indices,
+                     uint32_t N_max = std::numeric_limits<uint32_t>::max()) {
+    const auto buf_size = std::min<uint32_t>(std::get<0>(bufs).size(), N_max);
     if (buf_size > 0 && indices.size() > 0) {
       auto indices_sorted = indices;
       std::sort(indices_sorted.begin(), indices_sorted.end());
@@ -413,19 +413,19 @@ namespace Sycl_Graph {
     }
   }
 
-  template <std::unsigned_integral uI_t, typename... Ts>
+  template <typename... Ts>
   void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                     const std::vector<uI_t> &indices) {}
+                     const std::vector<uint32_t> &indices) {}
 
-  template <typename T, std::unsigned_integral uI_t, typename... Ts>
+  template <typename T, typename... Ts>
   void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, auto condition) {
     auto indices = buffer_get_indices(std::get<sycl::buffer<T, 1>>(bufs), q, condition);
     buffer_remove(bufs, q, indices);
   }
 
-  template <typename T, std::unsigned_integral uI_t = uint32_t>
+  template <typename T>
   sycl::buffer<T, 1> buffer_combine(sycl::queue &q, sycl::buffer<T, 1> buf0,
-                                    sycl::buffer<T, 1> buf1, uI_t size0 = 0, uI_t size1 = 0) {
+                                    sycl::buffer<T, 1> buf1, uint32_t size0 = 0, uint32_t size1 = 0) {
     if (size0 == 0) {
       size0 = buf0.size();
     }
@@ -446,9 +446,9 @@ namespace Sycl_Graph {
     return new_buf;
   }
 
-  template <std::unsigned_integral uI_t = uint32_t, typename... Ts>
-  sycl::buffer<Ts...> buffer_combine(sycl::queue &q, std::tuple<Ts...> bufs, uI_t size0 = 0,
-                                     uI_t size1 = 0) {
+  template <typename... Ts>
+  sycl::buffer<Ts...> buffer_combine(sycl::queue &q, std::tuple<Ts...> bufs, uint32_t size0 = 0,
+                                     uint32_t size1 = 0) {
     return std::apply([&](auto &...buf) { return buffer_combine(q, buf..., size0, size1); }, bufs);
   }
 

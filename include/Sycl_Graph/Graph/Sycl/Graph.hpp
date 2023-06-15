@@ -24,8 +24,8 @@ namespace Sycl_Graph::Sycl {
     typedef Sycl_Graph::Graph<_Vertex_Buffer, _Edge_Buffer> Base_t;
     typedef _Vertex_Buffer Vertex_Buffer_t;
     typedef _Edge_Buffer Edge_Buffer_t;
-    typedef typename Base_t::uI_t uI_t;
-    Graph(sycl::queue &q, uI_t NV = 0, uI_t NE = 0, const sycl::property_list &props = {})
+    typedef typename Base_t::uint32_t uint32_t;
+    Graph(sycl::queue &q, uint32_t NV = 0, uint32_t NE = 0, const sycl::property_list &props = {})
         : q(q), Base_t(Vertex_Buffer_t(q, NV, props), Edge_Buffer_t(q, NE, props)) {}
 
     Graph(Vertex_Buffer_t &vertex_buf, Edge_Buffer_t &edge_buf, sycl::queue &q)
@@ -33,11 +33,11 @@ namespace Sycl_Graph::Sycl {
 
     sycl::queue &q;
 
-    uI_t max_vertices() const { return this->vertex_buf.max_size(); }
+    uint32_t max_vertices() const { return this->vertex_buf.max_size(); }
 
-    uI_t max_edges() const { return this->edge_buf.max_size(); }
+    uint32_t max_edges() const { return this->edge_buf.max_size(); }
 
-    void resize(uI_t NV_new, uI_t NE_new) {
+    void resize(uint32_t NV_new, uint32_t NE_new) {
       this->vertex_buf.resize(NV_new);
       this->edge_buf.resize(NE_new);
     }
