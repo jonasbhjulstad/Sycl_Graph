@@ -1,12 +1,18 @@
+#include <iostream>
+#include <utility>
 #include <metal.hpp>
+#include "FooHeader.hpp"
 
-template <typename T>
-struct Foo;
-using Ts = metal::list<float, double, int, uint32_t>;
 
-using
+template <typename ... Ts>
+struct FooInst : metal::invoke<metal::lambda<Foo>, metal::list<Ts ...>> {};
 
-int main()
-{
-    return 0;
-}
+template struct FooInst<float, double>;
+
+template struct Foo<float>;
+template struct Foo<double>;
+
+// void instantiate()
+// {
+//     metal::invoke<metal::lambda<Foo>, DTypes> Inst;
+// }
