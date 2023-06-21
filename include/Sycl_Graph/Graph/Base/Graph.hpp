@@ -26,7 +26,6 @@ namespace Sycl_Graph
     typedef _Vertex_Buffer_t Vertex_Buffer_t;
     typedef _Edge_Buffer_t Edge_Buffer_t;
 
-    typedef typename Vertex_Buffer_t::uint32_t uint32_t;
 
     typedef Graph<Vertex_Buffer_t, Edge_Buffer_t> Graph_t;
 
@@ -41,10 +40,10 @@ namespace Sycl_Graph
     uint32_t N_edges_max() const { return edge_buf.max_size(); }
 
     template <typename T>
-    static constexpr bool has_Edge_type = is_Edge_type<T> && Edge_Buffer_t::template is_Data_types<typename T::Connection_IDs, typename T::Data_t>;
+    static constexpr bool has_Edge_type = is_Edge_type<T> && Edge_Buffer_t::template is_Data_types<typename T::ID_Pair_t, typename T::Data_t>;
 
     template <typename T>
-    static constexpr bool has_Vertex_type = is_Vertex_type<T> && Vertex_Buffer_t::template is_Data_types<typename T::ID_t, typename T::Data_t>;
+    static constexpr bool has_Vertex_type = is_Vertex_type<T> && Vertex_Buffer_t::template is_Data_types<typename T::Data_t>;
 
     void resize(uint32_t NV_new, uint32_t NE_new)
     {
@@ -109,7 +108,6 @@ namespace Sycl_Graph
   {
     typename T::Vertex_Buffer_t;
     typename T::Edge_Buffer_t;
-    typename T::uint32_t;
     typename T::Vertex_t;
     typename T::Vertex_Data_t;
     typename T::Edge_t;
@@ -127,7 +125,6 @@ namespace Sycl_Graph
     {t.remove_vertex(0)};
     {t.remove_edge(0, 0)};
     {t.template get_edges<int>()};
-    {t.template get_edges<int>(std::vector<typename T::uint32_t>{})};
   };
 
 

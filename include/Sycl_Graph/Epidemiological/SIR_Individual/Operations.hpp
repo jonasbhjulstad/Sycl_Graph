@@ -54,8 +54,8 @@ namespace Sycl_Graph::Epidemiological {
     void invoke(const auto& edge_acc, const auto& from_acc, const auto& to_acc, const auto& source_acc, auto& target_acc,
                 sycl::handler& h) const {
       h.parallel_for(edge_acc.size(), [=, this](sycl::id<1> id) {
-        auto id_from = edge_acc[id].from;
-        auto id_to = edge_acc[id].to;
+        auto id_from = edge_acc[id].id.from;
+        auto id_to = edge_acc[id].id.to;
         auto seed_acc = seeds.get_access<sycl::access::mode::read_write>();
         if (edge_acc[id].is_valid() && (from_acc.data[id_from] == SIR_INDIVIDUAL_I)
             && (to_acc.data[id_to] == SIR_INDIVIDUAL_S)) {

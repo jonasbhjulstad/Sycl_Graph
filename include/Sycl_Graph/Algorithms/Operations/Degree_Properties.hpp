@@ -24,10 +24,10 @@ namespace Sycl_Graph::Sycl {
       h.parallel_for(from_acc.size(), [=](sycl::id<1> id) {
         target_acc[id] = 0;
         for (int edge_idx = 0; edge_idx < edge_acc.size(); edge_idx++) {
-          auto from_id = edge_acc[edge_idx].from;
+          auto from_id = edge_acc[edge_idx].id.from;
           if (from_id == id) target_acc[id] += 1;
 
-          auto to_id = edge_acc[edge_idx].to;
+          auto to_id = edge_acc[edge_idx].id.to;
           if (to_id == id) target_acc[id] += 1;
         }
       });

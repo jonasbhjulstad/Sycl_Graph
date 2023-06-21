@@ -24,7 +24,6 @@ namespace Sycl_Graph::Sycl {
     typedef Sycl_Graph::Graph<_Vertex_Buffer, _Edge_Buffer> Base_t;
     typedef _Vertex_Buffer Vertex_Buffer_t;
     typedef _Edge_Buffer Edge_Buffer_t;
-    typedef typename Base_t::uint32_t uint32_t;
     Graph(sycl::queue &q, uint32_t NV = 0, uint32_t NE = 0, const sycl::property_list &props = {})
         : q(q), Base_t(Vertex_Buffer_t(q, NV, props), Edge_Buffer_t(q, NE, props)) {}
 
@@ -96,11 +95,11 @@ namespace Sycl_Graph::Sycl {
     {
       if constexpr(is_Edge_type<T>)
       {
-        return this->edge_buf.template get_buffer<typename T::Connection_IDs, typename T::Data_t>().current_size();
+        return this->edge_buf.template get_buffer<typename T::ID_Pair_t, typename T::Data_t>().current_size();
       }
       else if constexpr (is_Vertex_type<T>)
       {
-        return this->vertex_buf.template get_buffer<typename T::ID_t, typename T::Data_t>().current_size();
+        return this->vertex_buf.template get_buffer<typename T::Data_t>().current_size();
       }
 
       return -1;

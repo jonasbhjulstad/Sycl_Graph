@@ -13,7 +13,7 @@
 #include <random>
 
 namespace Sycl_Graph {
-template <Edge_type Edge_t = ID_Edge_t>
+template <Edge_type Edge_t = Void_Edge_t>
 auto random_connect(const std::vector<uint32_t>& from_nodes,
                            const std::vector<uint32_t> &to_nodes, float p,
                            bool self_loop, uint32_t seed) {
@@ -29,16 +29,16 @@ auto random_connect(const std::vector<uint32_t>& from_nodes,
   }
   Static_RNG::default_rng rng(seed);
   Static_RNG::bernoulli_distribution<float> dist(p);
-  if (!self_loop)
-    edge_list.erase(std::remove_if(edge_list.begin(), edge_list.end(),
-                                   [&](auto &e) { return e.from == e.to; }),
-                    edge_list.end());
   if (p == 1)
     return edge_list;
   if (p == 0)
     return std::vector<Edge_t>{};
+  if (!self_loop)
+    edge_list.erase(std::remove_if(edge_list.begin(), edge_list.end(),
+                                   [&](auto &e) { return e.id.from == e.id.to; }),
+                    edge_list.end());
   edge_list.erase(std::remove_if(edge_list.begin(), edge_list.end(),
-                                 [&](auto &e) { return !dist(rng); }),
+                                 [&](auto &e) { return dist(rng); }),
                   edge_list.end());
   return edge_list;
 }

@@ -10,9 +10,9 @@ typedef Sycl_Graph::Vertex<float> fVertex_t;
 typedef Sycl_Graph::Vertex<int> iVertex_t;
 typedef Sycl_Graph::Vertex<double> dVertex_t;
 typedef Sycl_Graph::Edge<float> fEdge_t;
-typedef Sycl_Graph::Edge<fEdge_t, iVertex_t, fVertex_t> i_f_edge_t;
-typedef Sycl_Graph::Edge<fEdge_t, fVertex_t, iVertex_t> f_i_edge_t;
-typedef Sycl_Graph::Edge<fEdge_t, iVertex_t, iVertex_t> i_i_edge_t;
+typedef Sycl_Graph::Edge<float, iVertex_t, fVertex_t> i_f_edge_t;
+typedef Sycl_Graph::Edge<float, fVertex_t, iVertex_t> f_i_edge_t;
+typedef Sycl_Graph::Edge<float, iVertex_t, iVertex_t> i_i_edge_t;
 
 void printAvailableGPUs()
 {

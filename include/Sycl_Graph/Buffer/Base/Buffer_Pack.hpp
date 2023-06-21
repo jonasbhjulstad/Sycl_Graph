@@ -7,7 +7,6 @@ namespace Sycl_Graph {
   template <Sycl_Graph::Buffer_type... Bs> struct Buffer_Pack
   {
 
-    typedef typename std::tuple_element_t<0, std::tuple<Bs...>>::uint32_t uint32_t;
     typedef std::tuple<Bs...> Buffer_t;
     typedef std::tuple<typename Bs::Data_t...> Data_t;
     static constexpr uint32_t N_buffers = sizeof...(Bs);

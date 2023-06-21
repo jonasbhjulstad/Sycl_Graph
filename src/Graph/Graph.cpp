@@ -29,11 +29,5 @@
 namespace Sycl_Graph
 {
 
-namespace _detail::
-{
-
-using Default_Vertex_DTypes = metal::list<void, float, double, int, uint32_t>;
-
-}
 
 template struct

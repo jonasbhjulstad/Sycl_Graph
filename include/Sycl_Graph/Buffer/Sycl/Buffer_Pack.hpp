@@ -11,7 +11,6 @@ namespace Sycl_Graph::Sycl
     {
 
         using Base_t = Sycl_Graph::Buffer_Pack<Bs ...>;
-        typedef typename Base_t::uint32_t uint32_t;
         typedef typename Base_t::Buffer_t Buffer_t;
         using Base_t::get_buffer;
         using Base_t::Base_t;

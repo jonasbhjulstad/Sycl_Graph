@@ -144,7 +144,7 @@ int main() {
   std::cout << "i_f_edge_t buffer contents: " << std::endl;
 
   for (auto& e : edge_prev) {
-    std::cout << e.from << " -> " << e.to << ": " << e.data << std::endl;
+    std::cout << e.id.from << " -> " << e.id.to << ": " << e.data << std::endl;
   }
 
   auto ex_event = invoke_extraction(graph, i_f_extract, i_f_target);
@@ -173,7 +173,7 @@ int main() {
   std::cout << "i_f_edge_t buffer contents: " << std::endl;
   auto edge_after = i_f_e_buf.get_edges();
   for (auto& e : edge_after) {
-    std::cout << e.from << " -> " << e.to << ": " << e.data << std::endl;
+    std::cout << e.id.from << " -> " << e.id.to << ": " << e.data << std::endl;
   }
   return 0;
 }

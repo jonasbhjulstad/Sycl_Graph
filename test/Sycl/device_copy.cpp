@@ -7,17 +7,18 @@ struct Foo
 {
     //declare as sycl device copyable
     Foo() = default;
-    Foo(Foo& a): d(a.d){}
-    std::vector<int> d;
+    int a;
 
 };
-template <>
-inline constexpr bool sycl::is_device_copyable_v<Foo> = true;
 
 int main()
 {
     //get all gpu devices
     auto devices = sycl::device::get_devices(sycl::info::device_type::gpu);
+
+    auto version = devices[1].get_info<cl::sycl::info::device::driver_version>();
+    std::cout << version << std::endl;
+
 
     //print them
 for(auto& device : devices)
@@ -26,21 +27,25 @@ for(auto& device : devices)
     }
 
     //create sycl queue
-    sycl::queue q(devices[1]);
+    sycl::queue q(sycl::gpu_selector_v);
     //print selected device
 
     //create sycl queue
     // sycl::queue q(sycl::gpu_selector_v);
     //print selected device
-std::cout << "Running on " << q.get_device().get_info<sycl::info::device::name>() << "\n";
+    std::cout << "Running on " << q.get_device().get_info<sycl::info::device::name>() << "\n";
     //create a Foo
-    Foo a;
+    std::vector<Foo> fooVec(1);
+
     //create sycl buffer for a
-    sycl::buffer<Foo, 1> b(&a, sycl::range<1>(1));
+    sycl::buffer<Foo, 1> b(fooVec.data(), 100);
+    q.wait();
     q.submit([&](sycl::handler& cgh){
         auto acc = b.get_access<sycl::access::mode::read_write>(cgh);
         cgh.single_task<class foo>([=](){
-            acc[0].d[0] = 1;
+            acc[0].a = 1;
         });
-    });
+    }).wait();
+
+    return 0;
 }
