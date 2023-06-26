@@ -9,10 +9,17 @@ namespace Sycl_Graph::Sycl {
     typedef std::tuple<Vertex_t> Accessor_Types;
     static constexpr std::array<sycl::access_mode, 1> graph_access_modes
         = {sycl::access_mode::read};
+
+
     static constexpr sycl::access_mode target_access_mode = sycl::access_mode::write;
+    void _invoke(auto& accessors, auto& custom_acc, auto& target_acc, sycl::handler& h) {
+      auto& v_acc = std::get<0>(accessors);
+      static_cast<Derived*>(this)->invoke(v_acc, custom_acc, target_acc, h);
+    }
+
     void _invoke(auto& accessors, auto& target_acc, sycl::handler& h) {
       auto& v_acc = std::get<0>(accessors);
-      static_cast<const Derived*>(this)->invoke(v_acc, target_acc, h);
+      static_cast<Derived*>(this)->invoke(v_acc, target_acc, h);
     }
 
     template <Graph_type Graph_t> size_t target_buffer_size(const Graph_t& G) const {
@@ -43,9 +50,8 @@ namespace Sycl_Graph::Sycl {
         = {sycl::access_mode::read_write};
     void _invoke(auto& accessors, const auto& source_acc, sycl::handler& h) {
       auto& v_acc = std::get<0>(accessors);
-      static_cast<const Derived*>(this)->invoke(v_acc, source_acc, h);
+      static_cast<Derived*>(this)->invoke(v_acc, source_acc, h);
     }
-
     template <Graph_type Graph_t> size_t source_buffer_size(const Graph_t& G) const {
       return static_cast<const Derived*>(this)->source_buffer_size(G);
     }
@@ -80,7 +86,7 @@ namespace Sycl_Graph::Sycl {
         = {sycl::access_mode::read};
     void _invoke(auto& accessors, const auto& source_acc, auto& target_acc, sycl::handler& h) {
       auto& v_acc = std::get<0>(accessors);
-      static_cast<const Derived*>(this)->invoke(v_acc, source_acc, target_acc, h);
+      static_cast<Derived*>(this)->invoke(v_acc, source_acc, target_acc, h);
     }
 
     template <Graph_type Graph_t> size_t source_buffer_size(const Graph_t& G) const {

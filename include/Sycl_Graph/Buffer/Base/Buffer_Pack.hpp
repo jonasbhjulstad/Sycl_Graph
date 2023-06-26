@@ -33,7 +33,6 @@ namespace Sycl_Graph {
       return std::apply([](auto &&...buffers) { return (buffers.size() + ...); }, buffers);
     }
 
-
     template <typename D> auto &get_buffer(const uint32_t &id) const {
       return get_buffer<D>().get_buffer(id);
     }

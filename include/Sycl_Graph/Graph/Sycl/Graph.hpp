@@ -99,7 +99,7 @@ namespace Sycl_Graph::Sycl {
       }
       else if constexpr (is_Vertex_type<T>)
       {
-        return this->vertex_buf.template get_buffer<typename T::Data_t>().current_size();
+        return this->vertex_buf.template get_buffer<typename T::ID_t, typename T::Data_t>().current_size();
       }
 
       return -1;

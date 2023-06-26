@@ -17,16 +17,24 @@ struct Vertex
     static constexpr uint32_t invalid_id = std::numeric_limits<uint32_t>::max();
     typedef D Data_t;
     Vertex() = default;
-
-    Vertex(uint32_t id, const D &data) : id(id), data(data)
+    struct ID_t
+    {
+        uint32_t value = invalid_id;
+        bool operator!=(const ID_t& id_1)
+        {
+            return this->value != id_1.value;
+        }
+    };
+    Vertex(uint32_t id, const D &data) : id{id}, data(data)
     {
     }
-    uint32_t id = invalid_id;
+    ID_t id;
+    Vertex(uint32_t id): id{id}{}
     Data_t data;
 
     bool is_valid() const
     {
-        return id != invalid_id;
+        return id.value != invalid_id;
     }
 };
 
@@ -35,15 +43,24 @@ struct Vertex<void>
 {
     static constexpr uint32_t invalid_id = std::numeric_limits<uint32_t>::max();
     typedef void Data_t;
+    struct ID_t
+    {
+        uint32_t value = invalid_id;
+        bool operator!=(const ID_t& id_1)
+        {
+            return this->value != id_1.value;
+        }
+    };
+
     Vertex() = default;
 
-    Vertex(uint32_t id) : id(id)
+    Vertex(uint32_t id) : id{id}
     {
     }
-    uint32_t id = invalid_id;
+    ID_t id;
     bool is_valid() const
     {
-        return id != invalid_id;
+        return id.value != invalid_id;
     }
 };
 
@@ -51,9 +68,8 @@ typedef Vertex<void> Void_Vertex_t;
 
 template <typename T>
 concept Vertex_type = requires(T t) {
-    {
-        t.id
-    } -> std::convertible_to<uint32_t>;
+    T::id.value;
+    typename T::ID_t;
 };
 
 template <typename T>
