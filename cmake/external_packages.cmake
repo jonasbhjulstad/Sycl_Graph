@@ -14,7 +14,8 @@ find_package(Static_RNG REQUIRED)
 # )
 # endif()
 add_compile_options("-fsycl")
-# find_package(IntelSYCL REQUIRED)
+find_package(IntelSYCL REQUIRED)
+
 
 CPMFindPackage(NAME metal
 GITHUB_REPOSITORY brunocodutra/metal
@@ -39,6 +40,7 @@ include(FindThreads)
 #     GIT_TAG master
 # )
 
+find_package(spdlog REQUIRED)
 find_package(oneDPL REQUIRED)
 
 # CPMFindPackage(NAME etl

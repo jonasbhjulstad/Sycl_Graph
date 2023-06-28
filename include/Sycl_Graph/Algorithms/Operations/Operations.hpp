@@ -9,6 +9,8 @@
 #include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
 #include <array>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/spdlog.h>
 #include <tuple>
 
 namespace Sycl_Graph::Sycl
@@ -28,7 +30,6 @@ auto get_custom_accessor_impl(const auto &buf)
 }
 
 } // namespace _detail
-
 template <Graph_type Graph_t, Operation_type Op>
 auto get_graph_accessors(Graph_t &graph, sycl::handler &h)
 {
@@ -39,10 +40,10 @@ auto get_graph_accessors(Graph_t &graph, sycl::handler &h)
 }
 
 template <Graph_type Graph_t, Operation_type Op>
-auto get_custom_accessors(tuple_like auto &bufs, sycl::handler &h)
+auto get_custom_accessors(tuple_like auto& bufs, sycl::handler &h)
 {
     static_assert(std::tuple_size_v<std::remove_reference_t<decltype(bufs)>> == Op::custom_access_modes.size(),
-                    "Number of access modes and accessor types must be equal");
+                  "Number of access modes and accessor types must be equal");
     if constexpr (std::tuple_size_v<decltype(Op::custom_access_modes)> == 0)
     {
         return std::tuple<>();
@@ -51,12 +52,13 @@ auto get_custom_accessors(tuple_like auto &bufs, sycl::handler &h)
     {
         return std::apply(
             [&](auto &&...buf) {
-                return std::apply([&](auto ... mode) {
-                    assert((std::is_same_v<decltype(mode), sycl::access::mode> && ...));
-                    assert(((mode == sycl::access_mode::atomic) && ...));
-                    assert(((buf != nullptr) && ...));
-                    return std::make_tuple(buf->template get_access<sycl::access_mode::atomic>(h)...); },
-                                  Op::custom_access_modes);
+                return std::apply(
+                    [&](auto... mode) {
+                        assert((std::is_same_v<decltype(mode), sycl::access::mode> && ...));
+                        assert(((mode == sycl::access_mode::atomic) && ...));
+                        return std::make_tuple(buf->template get_access<sycl::access_mode::atomic>(h)...);
+                    },
+                    Op::custom_access_modes);
             },
             bufs);
     }
@@ -64,9 +66,9 @@ auto get_custom_accessors(tuple_like auto &bufs, sycl::handler &h)
 template <Operation_type Op>
 sycl::event invoke_operation(Graph_type auto &graph,
                              Op &operation,
-                             auto &source_buf,
-                             auto &target_buf,
-                             tuple_like auto &custom_bufs,
+                             auto&& source_buf,
+                             auto&& target_buf,
+                             tuple_like auto& custom_bufs,
                              auto &dep_event)
 {
     return graph.q.submit([&](sycl::handler &h) {
@@ -76,73 +78,65 @@ sycl::event invoke_operation(Graph_type auto &graph,
         constexpr bool is_custom_buf = std::tuple_size_v<std::remove_reference_t<decltype(custom_bufs)>> > 0;
         if constexpr (is_transform<Op>)
         {
-            #ifdef OPERATION_VERBOSE_DEBUG
-            std::cout << "Transform operation" << std::endl;
-            #endif
+
             auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
             auto target_acc = target_buf->template get_access<sycl::access_mode::write>(h);
+
             if constexpr (is_custom_buf)
             {
                 auto custom_accessors =
                     get_custom_accessors<decltype(graph), std::remove_reference_t<decltype(operation)>>(custom_bufs, h);
-                operation._invoke(graph_accessors, custom_accessors, source_acc, target_acc, h);
+                operation.__invoke(h, graph_accessors, custom_accessors, source_acc, target_acc);
             }
             else
             {
-                operation._invoke(graph_accessors, source_acc, target_acc, h);
+                operation.__invoke(h, graph_accessors, source_acc, target_acc);
             }
         }
         else if constexpr (is_injection<Op>)
         {
-            #ifdef OPERATION_VERBOSE_DEBUG
-            std::cout << "Injection operation" << std::endl;
-            #endif
+
             auto source_acc = source_buf->template get_access<sycl::access_mode::read>(h);
             if constexpr (is_custom_buf)
             {
                 auto custom_accessors =
                     get_custom_accessors<decltype(graph), std::remove_reference_t<decltype(operation)>>(custom_bufs, h);
-                operation._invoke(graph_accessors, custom_accessors, source_acc, h);
+                operation.__invoke(h, graph_accessors, custom_accessors, source_acc);
             }
             else
             {
-                operation._invoke(graph_accessors, source_acc, h);
+                operation.__invoke(h, graph_accessors, source_acc);
             }
         }
         else if constexpr (is_extraction<Op>)
         {
 
-            #ifdef OPERATION_VERBOSE_DEBUG
-            std::cout << "Extraction operation" << std::endl;
-            #endif
-            auto target_acc = target_buf-> template get_access<sycl::access_mode::write>(h);
+            auto target_acc = target_buf->template get_access<sycl::access_mode::write>(h);
 
             if constexpr (is_custom_buf)
             {
                 auto custom_accessors =
                     get_custom_accessors<decltype(graph), std::remove_reference_t<decltype(operation)>>(custom_bufs, h);
-                operation._invoke(graph_accessors, custom_accessors, target_acc, h);
+                operation.__invoke(h, graph_accessors, custom_accessors, target_acc);
             }
             else
             {
-                operation._invoke(graph_accessors, target_acc, h);
+                operation.__invoke(h, graph_accessors, target_acc);
             }
         }
         else if constexpr (is_inplace_modification<Op>)
         {
-            #ifdef OPERATION_VERBOSE_DEBUG
-            std::cout << "Inplace modification operation" << std::endl;
-            #endif
 
             if constexpr (is_custom_buf)
             {
                 auto custom_accessors =
                     get_custom_accessors<decltype(graph), std::remove_reference_t<decltype(operation)>>(custom_bufs, h);
-                operation._invoke(graph_accessors, custom_accessors, h);
+
+                operation.__invoke(h, graph_accessors, custom_accessors);
             }
             else
             {
-                operation._invoke(graph_accessors, h);
+                operation.__invoke(h, graph_accessors);
             }
         }
     });
@@ -157,41 +151,48 @@ sycl::event invoke_operation(Graph_type auto &G, tuple_like auto &&tuple)
 template <Operation_type... Op>
 auto invoke_operations(Graph_type auto &graph,
                        std::tuple<Op...> &operations,
-                       tuple_like auto &source_bufs,
-                       tuple_like auto &target_bufs,
-                       tuple_like auto &custom_bufs = EmptyTuple<sizeof...(Op)>{},
+                       tuple_like auto& source_bufs,
+                       tuple_like auto& target_bufs,
+                       tuple_like auto& custom_bufs,
                        UniformTuple<sizeof...(Op), sycl::event> dep_events = UniformTuple<sizeof...(Op), sycl::event>{})
 {
 
     static_assert(
-        !std::is_same_v<decltype(std::get<0>(target_bufs)), std::shared_ptr<sycl::buffer<Operation_Buffer_Void_t>>>);
+        !std::is_same_v<decltype(std::get<0>(target_bufs)), std::nullptr_t>);
 
     auto shuffled_tuples = shuffle_tuples(operations, source_bufs, target_bufs, custom_bufs, dep_events);
     std::apply([&](auto &&...tup) { return std::make_tuple(invoke_operation(graph, tup)...); }, shuffled_tuples);
 }
-
 template <Operation_type... Op>
-auto invoke_operation_sequence(Graph_type auto &graph,
-                               std::tuple<Op...> &&operations,
-                               tuple_like auto &&source_bufs,
-                               tuple_like auto &&target_bufs,
-                               tuple_like auto &&custom_bufs = EmptyTuple<sizeof...(Op)>{},
-                               sycl::event dep_event = sycl::event{});
+auto invoke_operations(Graph_type auto &graph,
+                       std::tuple<Op...> &operations,
+                       tuple_like auto& source_bufs,
+                       tuple_like auto& target_bufs,
+                       UniformTuple<sizeof...(Op), sycl::event> dep_events = UniformTuple<sizeof...(Op), sycl::event>{})
+{
+
+    static_assert(
+        !std::is_same_v<decltype(std::get<0>(target_bufs)), std::nullptr_t>);
+
+    auto shuffled_tuples = shuffle_tuples(operations, source_bufs, target_bufs, EmptyTuple<sizeof...(Op)>{}, dep_events);
+    std::apply([&](auto &&...tup) { return std::make_tuple(invoke_operation(graph, tup)...); }, shuffled_tuples);
+}
+
 
 template <Operation_type... Op>
 auto invoke_operation_sequence(Graph_type auto &graph,
                                std::tuple<Op...> &operations,
-                               tuple_like auto &source_bufs,
-                               tuple_like auto &target_bufs,
-                               tuple_like auto &custom_bufs = EmptyTuple<sizeof...(Op)>{},
+                               tuple_like auto& source_bufs,
+                               tuple_like auto& target_bufs,
+                               tuple_like auto& custom_bufs,
                                sycl::event dep_event = sycl::event{});
 
 template <Operation_type... Op>
 auto invoke_operation_sequence(Graph_type auto &graph,
-                               std::tuple<Op...> &operations,
-                               tuple_like auto &source_bufs,
-                               tuple_like auto &target_bufs,
-                               tuple_like auto &custom_bufs,
+                               std::tuple<Op ...> &operations,
+                               tuple_like auto& source_bufs,
+                               tuple_like auto& target_bufs,
+                               tuple_like auto& custom_bufs,
                                sycl::event dep_event)
 {
     auto event = invoke_operation(graph,
@@ -216,12 +217,12 @@ auto invoke_operation_sequence(Graph_type auto &graph,
     }
 }
 
-template <Operation_type... Op>
+template <Operation_type ... Op>
 auto invoke_operation_sequence(Graph_type auto &graph,
                                std::tuple<Op...> &&operations,
-                               tuple_like auto &&source_bufs,
-                               tuple_like auto &&target_bufs,
-                               tuple_like auto &&custom_bufs,
+                               tuple_like auto&& source_bufs,
+                               tuple_like auto&& target_bufs,
+                               tuple_like auto&& custom_bufs,
                                sycl::event dep_event)
 {
     auto event = invoke_operation(graph,
@@ -230,9 +231,9 @@ auto invoke_operation_sequence(Graph_type auto &graph,
                                   std::get<0>(target_bufs),
                                   std::get<0>(custom_bufs),
                                   dep_event);
-    #ifdef OPERATION_DEBUG_TARGET_BUFS
+#ifdef OPERATION_DEBUG_TARGET_BUFS
     auto target_vec = buffer_get(std::get<0>(target_bufs));
-    #endif
+#endif
     int a = 0;
     if constexpr (std::tuple_size_v<std::tuple<Op...>> > 1)
     {

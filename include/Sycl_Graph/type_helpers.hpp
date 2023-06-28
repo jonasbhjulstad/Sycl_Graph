@@ -368,7 +368,7 @@ concept has_tuple_element = requires(T t) {
 };
 
 template <class T>
-concept tuple_like = !std::is_reference_v<T> && requires(T t) {
+concept tuple_like = requires(T t) {
     typename std::tuple_size<T>::type;
     requires std::derived_from<std::tuple_size<T>, std::integral_constant<std::size_t, std::tuple_size_v<T>>>;
 } && []<std::size_t... N>(std::index_sequence<N...>) {

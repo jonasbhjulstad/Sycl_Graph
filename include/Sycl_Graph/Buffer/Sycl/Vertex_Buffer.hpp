@@ -18,7 +18,7 @@ struct Vertex_Accessor : public Buffer_Accessor<Mode, typename Vertex_t::ID_t, t
     Vertex_Accessor(Base_t &&base) : Base_t(base)
     {
     }
-
+    typedef Vertex_t value_type;
 
     sycl::accessor<ID_t, 1, Mode> ids = std::get<0>(this->accessors);
     sycl::accessor<Data_t, 1, Mode> data = std::get<1>(this->accessors);
@@ -27,7 +27,27 @@ struct Vertex_Accessor : public Buffer_Accessor<Mode, typename Vertex_t::ID_t, t
         auto [id, data] = this->get_idx(idx);
         return Vertex_t(id, data);
     }
+
+    size_t size() const
+    {
+        return this->ids.size();
+    }
 };
+
+template <Sycl_Graph::Vertex_type Vertex_t>
+auto vertex_to_vectors(const std::vector<Vertex_t> &vertices)
+{
+    //reserve
+    std::vector<typename Vertex_t::ID_t> ids(vertices.size());
+    std::vector<typename Vertex_t::Data_t> data(vertices.size());
+    for (size_t i = 0; i < vertices.size(); i++)
+    {
+        ids[i] = vertices[i].id;
+        data[i] = vertices[i].data;
+    }
+
+    return std::make_tuple(ids, data);
+}
 
 
 template <Sycl_Graph::Vertex_type _Vertex_t>
@@ -36,6 +56,7 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
 
     typedef Buffer<typename _Vertex_t::ID_t, typename _Vertex_t::Data_t> Base_t;
     typedef _Vertex_t Vertex_t;
+    typedef typename _Vertex_t::ID_t ID_t;
     typedef typename Base_t::Data_t Data_t;
     typedef typename Vertex_t::Data_t Vertex_Data_t;
 
@@ -45,17 +66,12 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
     }
 
     Vertex_Buffer(sycl::queue &q,
-                  const std::vector<uint32_t> &ids,
-                  const std::vector<Data_t> &data = {},
+                  const std::vector<ID_t> &ids,
+                  const std::vector<Vertex_Data_t> &data = {},
                   const sycl::property_list &props = {})
         : Base_t(q, ids, data, props)
     {
-    }
-
-    Vertex_Buffer(sycl::queue &q, const std::vector<Vertex_t> &vertices, const sycl::property_list &props = {})
-        : Base_t(q, 1, props)
-    {
-        this->add(vertices);
+        this->bufs = std::make_tuple(sycl::buffer<ID_t>(ids.data(), ids.size()), sycl::buffer<Vertex_Data_t>(data.data(), data.size()));
     }
 
     template <typename T>
@@ -74,17 +90,10 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
         return ids;
     }
 
+
     void add(const std::vector<Vertex_t> &vertices)
     {
-        std::vector<typename Vertex_t::ID_t> ids;
-        std::vector<Vertex_Data_t> data;
-        data.reserve(vertices.size());
-        ids.reserve(vertices.size());
-        for (const auto &v : vertices)
-        {
-            ids.push_back(v.id);
-            data.push_back(v.data);
-        }
+        auto [ids, data] = vertex_to_vectors(vertices);
         using Buffer_Data_t = std::tuple_element_t<1, typename Base_t::Data_t>;
         static_assert(std::is_same_v<Buffer_Data_t, typename Vertex_t::Data_t> &&
                       "Data type mismatch between entry and buffer");
@@ -114,7 +123,8 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
     Vertex_Accessor<Mode, Vertex_t> get_access(sycl::handler &h)
     {
         return Vertex_Accessor<Mode, Vertex_t>(
-            static_cast<Base_t *>(this)->template get_access<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t>(h));
+            static_cast<Base_t *>(this)->template get_access<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t>(
+                h));
     }
 
     void remove(const std::vector<uint32_t> &ids)
@@ -122,6 +132,13 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
         this->template remove_elements<uint32_t>(ids);
     }
 };
+
+template <Sycl_Graph::Vertex_type Vertex_t>
+auto make_vertex_buffer(sycl::queue &q, const std::vector<Vertex_t> &vertices, const sycl::property_list &props = {})
+{
+    auto [ids, data] = vertex_to_vectors(vertices);
+    return Vertex_Buffer<Vertex_t>(q, ids, data, props);
+}
 
 template <typename T>
 concept Vertex_Buffer_type = Sycl_Graph::Vertex_Buffer_type<T>;

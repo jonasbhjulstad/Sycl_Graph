@@ -242,11 +242,11 @@ namespace Sycl_Graph {
   }
 
   template <typename T>
-  std::optional<std::vector<T>> buffer_get(std::shared_ptr<sycl::buffer<T>> buf) {
-    return buf ? std::optional<std::vector<T>>(buffer_get(*buf)) : std::nullopt;
+  std::vector<T> buffer_get(std::shared_ptr<sycl::buffer<T>> buf) {
+    return buf ? buffer_get(*buf) : std::vector<T>();
   }
 
-  template <typename... Buf_t> auto buffer_get(std::tuple<std::shared_ptr<Buf_t>...> &bufs) {
+  template <typename... Buf_t> auto buffer_get(std::tuple<std::shared_ptr<Buf_t>...> bufs) {
     return std::apply([&](auto &&...buf) { return std::make_tuple(buffer_get(buf)...); }, bufs);
   }
 
@@ -433,8 +433,8 @@ namespace Sycl_Graph {
   }
 
   template <typename T>
-  sycl::buffer<T, 1> buffer_combine(sycl::queue &q, sycl::buffer<T, 1> buf0,
-                                    sycl::buffer<T, 1> buf1, uint32_t size0 = 0, uint32_t size1 = 0) {
+  sycl::buffer<T, 1> buffer_combine(sycl::queue &q, sycl::buffer<T, 1>& buf0,
+                                    sycl::buffer<T, 1>& buf1, uint32_t size0 = 0, uint32_t size1 = 0) {
     if (size0 == 0) {
       size0 = buf0.size();
     }

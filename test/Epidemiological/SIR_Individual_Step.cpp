@@ -9,7 +9,7 @@
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
 #include <iostream>
 #include <random>
-
+#include <spdlog/spdlog.h>
 using namespace Sycl_Graph::Epidemiological;
 using namespace Sycl_Graph::Sycl;
 
@@ -28,6 +28,8 @@ auto generate_nodes_edges(uint32_t N_pop, float p_ER, uint32_t seed) {
     for (auto &&node : nodes) {
       node.data = dist(mt) ? SIR_INDIVIDUAL_I : SIR_INDIVIDUAL_S;
     }
+  auto p_nodes = std::make_shared<std::vector<SIR_Individual_Vertex_t>>(nodes);
+  auto p_links = std::make_shared<std::vector<SIR_Individual_Infection_Edge_t>>(links);
   return std::make_tuple(nodes, links);
 }
 
@@ -36,11 +38,12 @@ auto generate_seed_buf(uint32_t N, uint32_t seed) {
   std::iota(vec.begin(), vec.end(), 0);
   std::mt19937 mt(seed);
   std::generate(vec.begin(), vec.end(), [&]() { return mt(); });
-  sycl::buffer<uint32_t> buf(vec.data(), sycl::range<1>(N));
-  return buf;
+  return std::make_shared<sycl::buffer<uint32_t>>(sycl::buffer<uint32_t>(vec.data(), sycl::range<1>(N)));
 }
 
 int main() {
+
+  spdlog::set_level(spdlog::level::debug);
   sycl::queue q(sycl::gpu_selector_v);
   uint32_t N_pop = 100;
   uint32_t seed = 87;
@@ -60,7 +63,7 @@ int main() {
   std::cout << "Number of links: " << links.size() << std::endl;
 
   SIR_Individual_Edge_Buffer_t e_buf(q, links);
-  SIR_Individual_Vertex_Buffer_t v_buf(q, nodes);
+  SIR_Individual_Vertex_Buffer_t v_buf = make_vertex_buffer(q, nodes);
 
   Sycl_Graph::Buffer_Pack vertex_buffer(v_buf);
   Sycl_Graph::Buffer_Pack edge_buffer(e_buf);
@@ -69,16 +72,12 @@ int main() {
   std::cout << "Graph has " << graph.N_vertices() << " vertices and " << graph.N_edges()
             << " edges." << std::endl;
 
-  //generate seeds equal to number of edges
-  auto p_seeds = generate_seed_buf(N_wg, seed);
 
   SIR_Individual_Population_Count_Extract_Op initial_pop_count;
   SIR_Individual_Recovery_Op recovery_op(v_buf, p_R);
   SIR_Individual_Population_Count_Transform_Op pop_count_op;
   SIR_Individual_Infection_Op infection_op(e_buf, v_buf, p_I);
-  auto edge_seeds = generate_seed_buf(graph.N_edges(), seed);
-  auto p_edge_seeds = std::make_tuple(std::make_shared<sycl::buffer<uint32_t>>(edge_seeds));
-  auto custom_buffers = std::make_tuple(std::tuple<>{}, p_edge_seeds, std::tuple<>{}, p_edge_seeds);
+  auto edge_seeds = generate_seed_buf(N_wg, seed);
   auto initial_pop_buf = create_target_buffer(graph, initial_pop_count);
   auto rec_pop_buf = create_target_buffer(graph, pop_count_op);
   auto inf_pop_buf = create_target_buffer(graph, pop_count_op);
@@ -94,7 +93,11 @@ int main() {
 
   q.wait();
 
-  auto op_tuple = std::make_tuple(initial_pop_count, recovery_op, pop_count_op, infection_op);
+  // auto op_tuple = std::make_tuple(initial_pop_count, recovery_op, pop_count_op, infection_op);
+  // auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(edge_seeds), std::tuple<>{}, std::make_tuple(edge_seeds));
+  auto op_tuple = std::make_tuple(initial_pop_count);
+
+  auto custom_buffers = std::make_tuple(std::tuple<>{});//, std::make_tuple(edge_seeds));
 
   auto [source_bufs, target_bufs] = create_operation_buffer_sequence(graph, op_tuple);
 
@@ -102,19 +105,7 @@ int main() {
 
   auto events = invoke_operation_sequence(graph, op_tuple, source_bufs, target_bufs, custom_buffers);
 
-  // auto initial_pop_event = invoke_extraction(graph, initial_pop_count, initial_pop_buf);
-  // auto rec_event = invoke_extraction(graph, recovery_op, rec_buf, initial_pop_event);
-
-  // auto rec_pop_event = invoke_transform(graph, pop_count_op, rec_b5uf, rec_pop_buf, rec_event);
-
-  // rec_pop_event.wait();
-
   std::apply([&](auto&... events) { (events.wait(), ...); }, events);
-
-  // auto inf_event = invoke_transform(graph, infection_op, rec_buf, inf_buf, rec_pop_event);
-  // auto inf_pop_event = invoke_transform(graph, pop_count_op, inf_buf, inf_pop_buf, inf_event);
-
-  // inf_pop_event.wait();
 
   q.wait();
   init_pop = Sycl_Graph::buffer_get(initial_pop_buf);
@@ -123,20 +114,20 @@ int main() {
   q.wait();
   // print pop bufs
   std::cout << "Initial population: " << std::endl;
-  for (auto& pop : *init_pop) {
+  for (auto pop : init_pop) {
     std::cout << pop << " ";
   }
   std::cout << std::endl;
 
   std::cout << "Recovered population: " << std::endl;
-  for (auto& pop : *rec_pop) {
+  for (auto pop : rec_pop) {
     std::cout << pop << " ";
   }
 
   std::cout << std::endl;
 
   std::cout << "Infected population: " << std::endl;
-  for (auto& pop : *inf_pop) {
+  for (auto pop : inf_pop) {
     std::cout << pop << " ";
   }
   std::cout << std::endl;

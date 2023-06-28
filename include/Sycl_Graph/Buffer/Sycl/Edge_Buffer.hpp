@@ -16,7 +16,7 @@ struct Edge_Accessor : public Buffer_Accessor<Mode, typename Edge_t::ID_Pair_t, 
     Edge_Accessor(const Base_t &base) : Base_t(base)
     {
     }
-
+    typedef Edge_t value_type;
     sycl::accessor<ID_Pair_t, 1, Mode> ids = std::get<0>(this->accessors);
     sycl::accessor<Data_t, 1, Mode> data = std::get<1>(this->accessors);
     Edge_t operator[](sycl::id<1> idx) const
@@ -24,6 +24,11 @@ struct Edge_Accessor : public Buffer_Accessor<Mode, typename Edge_t::ID_Pair_t, 
         const auto &id = this->ids[idx];
         const auto &data = this->data[idx];
         return Edge_t(id, data);
+    }
+
+    size_t size() const
+    {
+        return this->ids.size();
     }
 };
 

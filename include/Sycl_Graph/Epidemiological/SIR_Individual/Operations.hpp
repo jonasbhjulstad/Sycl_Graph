@@ -8,8 +8,7 @@
 namespace Sycl_Graph::Epidemiological
 {
 using namespace Sycl_Graph::Sycl;
-
-template <Sycl_Graph::Vertex_Buffer_type Vertex_Buffer_t>
+template <Sycl::Vertex_Buffer_type Vertex_Buffer_t>
 struct SIR_Individual_Recovery_Op
     : public Vertex_Extract_Operation<Vertex_Buffer_t, SIR_Individual_Recovery_Op<Vertex_Buffer_t>>
 {
@@ -25,14 +24,21 @@ struct SIR_Individual_Recovery_Op
     {
         auto seed_acc = std::get<0>(custom_acc);
         const float p_R = this->p_R;
-        assert(seed_acc.size() >= v_acc.size() && "Number of seeds must be equal to the number of vertices");
-        auto N_per_thread = v_acc.size() / seed_acc.size() + 1;
+        auto N_vertices = v_acc.size();
+        auto N_threads = std::min({N_vertices, seed_acc.size()});
+        auto N_per_thread = N_vertices > N_threads ? N_vertices / N_threads : 1;
         h.parallel_for(seed_acc.size(), [=](sycl::id<1> id) {
             auto seed = sycl::atomic_fetch_add<uint32_t>(seed_acc[id], 1);
-            Static_RNG::default_rng rng(1);
-            Static_RNG::bernoulli_distribution<float> dist(p_R);
-            result_acc[id] = v_acc.data[id];
-            result_acc[id] = dist(rng) ? SIR_INDIVIDUAL_R : v_acc.data[id];
+            Static_RNG::default_rng rng(seed);
+            for (int i = 0; i < N_per_thread; i++)
+            {
+                auto idx = id*N_per_thread + i;
+                if (idx > N_vertices)
+                    return;
+                Static_RNG::bernoulli_distribution<float> dist(p_R);
+                result_acc[idx] = v_acc.data[idx];
+                result_acc[idx] = dist(rng) ? SIR_INDIVIDUAL_R : v_acc.data[idx];
+            }
         });
     }
     template <typename Graph_t>
@@ -125,28 +131,39 @@ struct SIR_Individual_Population_Count_Extract_Op
     void invoke(const auto &v_acc, auto &target_acc, sycl::handler &h)
     {
 #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
-        //create sycl::stream
         sycl::stream out(1024, 256, h);
 #endif
         h.single_task([=]() {
             target_acc[0] = 0;
             target_acc[1] = 0;
             target_acc[2] = 0;
+            uint32_t N_susceptible = 0;
+            uint32_t N_infected = 0;
+            uint32_t N_recovered = 0;
             for (int i = 0; i < v_acc.size(); i++)
             {
                 if (v_acc.data[i] == SIR_INDIVIDUAL_S)
                 {
-                    target_acc[0]++;
+                    N_susceptible++;
                 }
                 else if (v_acc.data[i] == SIR_INDIVIDUAL_I)
                 {
-                    target_acc[1]++;
+                    N_infected++;
                 }
                 else if (v_acc.data[i] == SIR_INDIVIDUAL_R)
                 {
-                    target_acc[2]++;
+                    N_recovered++;
+                }
+                else
+                {
+                    #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
+                    out << "Invalid state: " << (uint32_t) v_acc.data[i] << sycl::endl;
+                    #endif
                 }
             }
+            target_acc[0] = N_susceptible;
+            target_acc[1] = N_infected;
+            target_acc[2] = N_recovered;
 #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
             out << "S: " << target_acc[0] << " I: " << target_acc[1] << " R: " << target_acc[2] << sycl::endl;
 #endif
@@ -158,6 +175,7 @@ struct SIR_Individual_Population_Count_Extract_Op
         return 3;
     }
 };
+
 
 struct SIR_Individual_Population_Count_Transform_Op
     : public Transform_Operation<SIR_Individual_Population_Count_Transform_Op>

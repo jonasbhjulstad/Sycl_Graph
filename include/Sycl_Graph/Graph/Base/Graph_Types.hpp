@@ -50,6 +50,11 @@ struct Vertex<void>
         {
             return this->value != id_1.value;
         }
+        //make ID_t convertible to uint32_t
+        operator uint32_t() const
+        {
+            return this->value;
+        }
     };
 
     Vertex() = default;

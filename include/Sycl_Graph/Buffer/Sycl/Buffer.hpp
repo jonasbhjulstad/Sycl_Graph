@@ -80,7 +80,7 @@ namespace Sycl_Graph::Sycl
 
         Buffer(sycl::queue &q, const std::vector<Ds>& ... data,
                const sycl::property_list &props = {})
-            : bufs(sycl::buffer<Ds, 1>(data, props)...), q(q), curr_size(std::get<0>(data ...).size()){}
+            : bufs(sycl::buffer<Ds, 1>(data, props)...), q(q), curr_size(std::get<0>(bufs).size()){}
 
         uint32_t current_size() const { return curr_size; }
 
@@ -127,6 +127,7 @@ namespace Sycl_Graph::Sycl
             buffer_resize(bufs, q, new_size);
             curr_size = std::min(curr_size, new_size);
         }
+
 
         void add(const std::tuple<std::vector<Ds>...>& data)
         {

@@ -17,6 +17,8 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
       "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
   )
 endif()
+#create compile_commands
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(-fsycl)
 add_link_options(-fsycl)
 set(SYCL_GRAPH_CUDA_FLAGS -fsycl-targets=nvptx64-nvidia-cuda)
