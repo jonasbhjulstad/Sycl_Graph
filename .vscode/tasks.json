@@ -1,0 +1,35 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "configure - Debug",
+            "type": "shell",
+            "command": "cmake -B ${workspaceFolder}/build -S ${workspaceFolder} -DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/cmake/toolchains/Intel_x86_Arch.cmake -DCMAKE_BUILD_TYPE=Debug -GNinja",
+            "problemMatcher": []
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "cmake --build ${workspaceFolder}/build --parallel 10",
+            "problemMatcher": []
+        },
+        {
+            "label": "build_target",
+            "type": "shell",
+            "command": "cmake --build ${workspaceFolder}/build --target ${fileBasenameNoExtension} --parallel 4",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "rm -rf ${workspaceFolder}/build/CMakeFiles ${workspaceFolder}/build/CMakeCache.txt",
+            "problemMatcher": []
+        }
+    ]
+}
