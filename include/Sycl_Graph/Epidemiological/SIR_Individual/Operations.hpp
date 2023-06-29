@@ -125,7 +125,7 @@ struct SIR_Individual_Population_Count_Extract_Op
 {
     using Base_t = Vertex_Extract_Operation<SIR_Individual_Vertex_Buffer_t, SIR_Individual_Population_Count_Extract_Op>;
     using Base_t::Accessor_Types;
-    static constexpr sycl::access::mode target_access_mode = sycl::access::mode::write;
+    static constexpr sycl::access::mode target_access_mode = sycl::access::mode::read_write;
     typedef uint32_t Target_t;
 
     void invoke(const auto &v_acc, auto &target_acc, sycl::handler &h)
@@ -157,7 +157,7 @@ struct SIR_Individual_Population_Count_Extract_Op
                 else
                 {
                     #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
-                    out << "Invalid state: " << (uint32_t) v_acc.data[i] << sycl::endl;
+                    out << "Invalid state: " << (uint32_t) v_acc.data[i] << "at idx: " << i << sycl::endl;
                     #endif
                 }
             }

@@ -13,6 +13,20 @@
 using namespace Sycl_Graph::Epidemiological;
 using namespace Sycl_Graph::Sycl;
 
+template <typename ... Ts>
+void print_shared_ptr_use_count(std::tuple<Ts ...>& p_tup)
+{
+  auto print_count = [](auto&& ptr)
+  {
+    std::cout << ptr.use_count() << " ";
+  };
+  std::cout << "Shared_ptr use count: ";
+  std::apply([&](auto&& ... ptr)
+  {
+    (print_count(ptr), ...);
+  }, p_tup);
+  std::cout << std::endl;
+}
 auto generate_nodes_edges(uint32_t N_pop, float p_ER, uint32_t seed) {
   std::vector<uint32_t> node_ids(N_pop);
   std::iota(node_ids.begin(), node_ids.end(), 0);
@@ -78,59 +92,67 @@ int main() {
   SIR_Individual_Population_Count_Transform_Op pop_count_op;
   SIR_Individual_Infection_Op infection_op(e_buf, v_buf, p_I);
   auto edge_seeds = generate_seed_buf(N_wg, seed);
-  auto initial_pop_buf = create_target_buffer(graph, initial_pop_count);
-  auto rec_pop_buf = create_target_buffer(graph, pop_count_op);
-  auto inf_pop_buf = create_target_buffer(graph, pop_count_op);
-
-
-  auto init_pop = Sycl_Graph::buffer_get(initial_pop_buf);
-  auto rec_pop = Sycl_Graph::buffer_get(rec_pop_buf);
-  auto inf_pop = Sycl_Graph::buffer_get(inf_pop_buf);
-  q.wait();
-
-  auto rec_buf = create_target_buffer(graph, recovery_op);
-  auto inf_buf = create_target_buffer(graph, infection_op);
 
   q.wait();
 
-  // auto op_tuple = std::make_tuple(initial_pop_count, recovery_op, pop_count_op, infection_op);
-  // auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(edge_seeds), std::tuple<>{}, std::make_tuple(edge_seeds));
+  // auto op_tuple = std::make_tuple(initial_pop_count, recovery_op, pop_count_op, infection_op, pop_count_op);
+  // auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(edge_seeds), std::tuple<>{}, std::make_tuple(edge_seeds), std::tuple<>{});
   auto op_tuple = std::make_tuple(initial_pop_count);
-
   auto custom_buffers = std::make_tuple(std::tuple<>{});//, std::make_tuple(edge_seeds));
+
 
   auto [source_bufs, target_bufs] = create_operation_buffer_sequence(graph, op_tuple);
 
+  print_shared_ptr_use_count(target_bufs);
+
+
+  // assert(std::get<0>(source_bufs) == nullptr);
+  // assert(std::get<1>(source_bufs) == nullptr);
+  // assert(std::get<2>(source_bufs) != nullptr);
+  // assert(std::get<3>(source_bufs) != nullptr);
+  // assert(std::get<4>(source_bufs) != nullptr);
+
+  std::apply([&](auto&& ... p_buf)
+  {
+    (assert(p_buf != nullptr), ...);
+  }, target_bufs);
 
 
   auto events = invoke_operation_sequence(graph, op_tuple, source_bufs, target_bufs, custom_buffers);
 
+
+  print_shared_ptr_use_count(target_bufs);
+
   std::apply([&](auto&... events) { (events.wait(), ...); }, events);
 
-  q.wait();
-  init_pop = Sycl_Graph::buffer_get(initial_pop_buf);
-  rec_pop = Sycl_Graph::buffer_get(rec_pop_buf);
-  inf_pop = Sycl_Graph::buffer_get(inf_pop_buf);
-  q.wait();
-  // print pop bufs
-  std::cout << "Initial population: " << std::endl;
-  for (auto pop : init_pop) {
-    std::cout << pop << " ";
-  }
-  std::cout << std::endl;
+  // auto& initial_pop_buf = std::get<0>(target_bufs);
+  // auto& rec_pop_buf = std::get<2>(target_bufs);
+  // auto& inf_pop_buf = std::get<4>(target_bufs);
 
-  std::cout << "Recovered population: " << std::endl;
-  for (auto pop : rec_pop) {
-    std::cout << pop << " ";
-  }
+  // q.wait();
+  // auto init_pop = Sycl_Graph::buffer_get(initial_pop_buf);
+  // auto rec_pop = Sycl_Graph::buffer_get(rec_pop_buf);
+  // auto inf_pop = Sycl_Graph::buffer_get(inf_pop_buf);
+  // q.wait();
+  // // print pop bufs
+  // std::cout << "Initial population: " << std::endl;
+  // for (auto pop : init_pop) {
+  //   std::cout << pop << " ";
+  // }
+  // std::cout << std::endl;
 
-  std::cout << std::endl;
+  // std::cout << "Recovered population: " << std::endl;
+  // for (auto pop : rec_pop) {
+  //   std::cout << pop << " ";
+  // }
 
-  std::cout << "Infected population: " << std::endl;
-  for (auto pop : inf_pop) {
-    std::cout << pop << " ";
-  }
-  std::cout << std::endl;
+  // std::cout << std::endl;
+
+  // std::cout << "Infected population: " << std::endl;
+  // for (auto pop : inf_pop) {
+  //   std::cout << pop << " ";
+  // }
+  // std::cout << std::endl;
 
   return 0;
 }

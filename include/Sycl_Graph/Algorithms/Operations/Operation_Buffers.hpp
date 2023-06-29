@@ -40,17 +40,12 @@ auto create_operation_buffers(const Graph_t &G, const std::tuple<Op> &operation)
     return std::make_pair(create_source_buffer(G, operation), create_target_buffer(G, operation));
 }
 
-template <Graph_type Graph_t, Operation_type Op, typename Buf_Prev_t>
-auto create_operation_buffer_sequence(const Graph_t &G, const std::tuple<Op> &operation, Buf_Prev_t target_buffer_prev)
-{
-    return std::make_pair(std::make_tuple(target_buffer_prev),
-                          std::make_tuple(create_target_buffer(G, std::get<0>(operation))));
-}
 
 template <Graph_type Graph_t, Operation_type... Op, typename Buf_Prev_t>
 auto create_operation_buffer_sequence(const Graph_t &G,
                                       const std::tuple<Op...> &operations,
                                       Buf_Prev_t target_buffer_prev);
+
 
 template <Graph_type Graph_t, Operation_type... Op, typename Buf_Prev_t>
 auto create_operation_buffer_sequence(const Graph_t &G,
@@ -61,7 +56,7 @@ auto create_operation_buffer_sequence(const Graph_t &G,
 
     if constexpr (has_Source_v<First>)
     {
-        auto target_buf = create_target_buffer(G, std::get<First>(operations));
+        auto target_buf = create_target_buffer(G, std::get<0>(operations));
         auto op_tail = drop_first_tuple_elem(operations);
         if constexpr (std::tuple_size_v<decltype(op_tail)> == 0)
         {
@@ -97,15 +92,15 @@ auto create_operation_buffer_sequence(const Graph_t &G,
     }
 }
 
-template <Graph_type Graph_t, Operation_type First, Operation_type... Op>
-auto create_operation_buffer_sequence(const Graph_t &G, const std::tuple<First, Op...> &operations)
+template <Graph_type Graph_t, Operation_type... Op>
+auto create_operation_buffer_sequence(const Graph_t &G, const std::tuple<Op...> &operations)
 {
-    auto source_buf = create_source_buffer(G, std::get<First>(operations));
-    auto target_buf = create_target_buffer(G, std::get<First>(operations));
+    auto source_buf = create_source_buffer(G, std::get<0>(operations));
+    auto target_buf = create_target_buffer(G, std::get<0>(operations));
 
-    if constexpr (std::tuple_size_v<std::remove_reference_t<decltype(operations)>> == 1)
+    if constexpr (std::tuple_size_v<std::remove_reference_t<decltype(operations)>> <= 1)
     {
-        return std::make_pair(std::tuple_cat(std::make_tuple(source_buf)), std::tuple_cat(std::make_tuple(target_buf)));
+        return std::make_pair(std::make_tuple(source_buf), std::make_tuple(target_buf));
     }
     else
     {

@@ -6,11 +6,11 @@
 #include <Sycl_Graph/Buffer/Sycl/Vertex_Buffer.hpp>
 namespace Sycl_Graph::Epidemiological
 {
-    enum SIR_Individual_State_t: unsigned char
+    enum SIR_Individual_State_t: char
     {
-        SIR_INDIVIDUAL_S,
-        SIR_INDIVIDUAL_I,
-        SIR_INDIVIDUAL_R
+        SIR_INDIVIDUAL_S = 0,
+        SIR_INDIVIDUAL_I = 1,
+        SIR_INDIVIDUAL_R = 2
     } ;
 
     typedef Vertex<SIR_Individual_State_t> SIR_Individual_Vertex_t;

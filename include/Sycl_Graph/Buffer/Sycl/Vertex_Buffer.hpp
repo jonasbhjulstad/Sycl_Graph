@@ -5,6 +5,7 @@
 #include <Sycl_Graph/Buffer/Sycl/Buffer.hpp>
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
 #include <concepts>
+#include <iostream>
 #include <type_traits>
 namespace Sycl_Graph::Sycl
 {
@@ -49,7 +50,10 @@ auto vertex_to_vectors(const std::vector<Vertex_t> &vertices)
     return std::make_tuple(ids, data);
 }
 
-
+namespace logging
+{
+static size_t N_Vertex_Buffers = 0;
+}
 template <Sycl_Graph::Vertex_type _Vertex_t>
 struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_t::Data_t>
 {
@@ -59,7 +63,7 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
     typedef typename _Vertex_t::ID_t ID_t;
     typedef typename Base_t::Data_t Data_t;
     typedef typename Vertex_t::Data_t Vertex_Data_t;
-
+    std::shared_ptr<spdlog::logger> logger;
     sycl::queue &q = Base_t::q;
     Vertex_Buffer(sycl::queue &q, uint32_t NV = 1, const sycl::property_list &props = {}) : Base_t(q, NV, props)
     {
@@ -71,7 +75,10 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
                   const sycl::property_list &props = {})
         : Base_t(q, ids, data, props)
     {
-        this->bufs = std::make_tuple(sycl::buffer<ID_t>(ids.data(), ids.size()), sycl::buffer<Vertex_Data_t>(data.data(), data.size()));
+        auto p_ids = std::make_shared<sycl::buffer<ID_t>>(sycl::buffer<ID_t>(ids.data(), ids.size()));
+        auto p_data = std::make_shared<sycl::buffer<Vertex_Data_t>>(sycl::buffer<Vertex_Data_t>(data.data(), data.size()));
+        this->bufs = std::make_tuple(std::move(p_ids), std::move(p_data));
+
     }
 
     template <typename T>
