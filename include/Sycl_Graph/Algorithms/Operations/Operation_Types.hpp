@@ -119,15 +119,20 @@ static std::string Global_Operation_Log_File_Name = "Operation_Debug.log";
 static std::shared_ptr<spdlog::logger> Global_Operation_Logger =
     spdlog::basic_logger_mt("Global_Operation_Debug_Logger", Global_Operation_Log_File_Name, true);
 } // namespace logging
-template <typename Derived>
+
+
+
+template <typename Derived, typename Source_t, typename Target_t>
 struct Operation_Base
 {
     size_t ID;
     size_t N_invocations = 0;
     std::shared_ptr<spdlog::logger> logger;
     std::shared_ptr<spdlog::logger> global_logger;
+
     typedef std::tuple<> Accessor_Types;
     static constexpr std::tuple<> graph_access_modes;
+
 
     Operation_Base(std::shared_ptr<spdlog::logger> logger)
         : logger(logger), global_logger(logging::Global_Operation_Logger)
@@ -142,7 +147,7 @@ struct Operation_Base
     Operation_Base() : ID(logging::N_Operation_Loggers++), global_logger(logging::Global_Operation_Logger)
     {
         logger = spdlog::basic_logger_mt("operation_logger_" + std::to_string(ID),
-                                         std::string("Operation_Debug_") + std::to_string(ID) + std::string(".log"));
+                                         std::string("Operation_Debug_") + std::to_string(ID) + std::string(".log"), true);
         logger->flush_on(spdlog::level::debug);
     }
 

@@ -567,5 +567,28 @@ namespace Sycl_Graph {
     return seeds;
   }
 
+
+  //Initialize sycl::buffer with data ownership tied to the scope of the buffer
+  template <typename T>
+  auto buffer_initialize(const std::vector<T>& data)
+  {
+    auto deleter = [](T* ptr) { delete[] ptr; };
+    std::shared_ptr<T> p_data(new T[data.size()], deleter);
+    std::copy(data.begin(), data.end(), p_data.get());
+    auto buf = sycl::buffer<T, 1>(p_data, sycl::range<1>(data.size()));
+    return buf;
+  }
+
+  template <typename T>
+  auto buffer_initialize_shared(const std::vector<T>& data)
+  {
+    auto deleter = [](T* ptr) { delete[] ptr; };
+    std::shared_ptr<T> p_data(new T[data.size()], deleter);
+    std::copy(data.begin(), data.end(), p_data.get());
+    auto buf = std::make_shared<sycl::buffer<T, 1>>(sycl::buffer<T, 1>(p_data, sycl::range<1>(data.size())));
+    return buf;
+  }
+
+
 }  // namespace Sycl_Graph
 #endif

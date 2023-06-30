@@ -87,14 +87,14 @@ struct Buffer
            std::string logger_filename = "buffer_" + std::to_string(logging::Buffer_id++))
         : bufs(std::make_shared<sycl::buffer<Ds, 1>>(
               sycl::buffer<Ds, 1>(sycl::range<1>(std::max<uint32_t>(N, 1)), props))...),
-          q(q), logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log"))
+          q(q), logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log", true))
     {
         logger->set_level(spdlog::level::debug);
         curr_size = N;
     }
 
         Buffer(sycl::queue &q, const std::vector<Ds>& ... data,
-               const sycl::property_list &props = {}, std::string logger_filename = "buffer_" + std::to_string(logging::Buffer_id++)): q(q), logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log"))
+               const sycl::property_list &props = {}, std::string logger_filename = "buffer_" + std::to_string(logging::Buffer_id++)): q(q), logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log", true))
                {
         logger->set_level(spdlog::level::debug);
         this->bufs = std::make_tuple(

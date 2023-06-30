@@ -120,7 +120,7 @@ struct SIR_Individual_Infection_Op
 };
 
 // Individual Infection Op: Chained with Individual Recovery Op as an inplace operation
-struct SIR_Individual_Population_Count_Extract_Op
+struct SIR_Individual_Population_Count
     : public Vertex_Extract_Operation<SIR_Individual_Vertex_Buffer_t, SIR_Individual_Population_Count_Extract_Op>
 {
     using Base_t = Vertex_Extract_Operation<SIR_Individual_Vertex_Buffer_t, SIR_Individual_Population_Count_Extract_Op>;
@@ -134,9 +134,6 @@ struct SIR_Individual_Population_Count_Extract_Op
         sycl::stream out(1024, 256, h);
 #endif
         h.single_task([=]() {
-            target_acc[0] = 0;
-            target_acc[1] = 0;
-            target_acc[2] = 0;
             uint32_t N_susceptible = 0;
             uint32_t N_infected = 0;
             uint32_t N_recovered = 0;
@@ -164,6 +161,10 @@ struct SIR_Individual_Population_Count_Extract_Op
             target_acc[0] = N_susceptible;
             target_acc[1] = N_infected;
             target_acc[2] = N_recovered;
+            target_acc[3] = 1;
+            target_acc[4] = 1;
+            target_acc[5] = 1;
+
 #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
             out << "S: " << target_acc[0] << " I: " << target_acc[1] << " R: " << target_acc[2] << sycl::endl;
 #endif
@@ -172,7 +173,7 @@ struct SIR_Individual_Population_Count_Extract_Op
     template <typename Graph_t>
     size_t target_buffer_size(const Graph_t &G) const
     {
-        return 3;
+        return 6;
     }
 };
 

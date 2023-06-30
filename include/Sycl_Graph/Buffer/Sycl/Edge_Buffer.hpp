@@ -36,20 +36,20 @@ template <Sycl_Graph::Edge_type _Edge_t>
 struct Edge_Buffer : public Buffer<typename _Edge_t::ID_Pair_t, typename _Edge_t::Data_t>
 {
     typedef _Edge_t Edge_t;
-    typedef Buffer<typename _Edge_t::ID_Pair_t, typename _Edge_t::Data_t> Base_t;
-    typedef typename Base_t::Data_t Data_t;
+    typedef typename _Edge_t::ID_Pair_t ID_Pair_t;
+    typedef typename _Edge_t::Data_t Edge_Data_t;
+    typedef Buffer<ID_Pair_t, Edge_Data_t> Base_t;
     typedef uint32_t uint32_t;
-    typedef Edge_t::ID_Pair_t ID_Pair_t;
 
     sycl::queue &q = Base_t::q;
     Edge_Buffer(sycl::queue &q, uint32_t NE = 1, const sycl::property_list &props = {}) : Base_t(q, NE, props)
     {
     }
 
-    Edge_Buffer(sycl::queue &q, const std::vector<Edge_t> &edges, const sycl::property_list &props = {})
-        : Base_t(q, 0, props)
+    Edge_Buffer(sycl::queue &q, const std::vector<ID_Pair_t>& ids, const std::vector<Edge_Data_t>& data, const sycl::property_list &props = {})
+        : Base_t(q, ids, data, props)
     {
-        this->add(edges);
+        this->bufs = std::make_tuple(buffer_initialize_shared(ids), buffer_initialize_shared(data));
     }
 
 
@@ -116,6 +116,26 @@ struct Edge_Buffer : public Buffer<typename _Edge_t::ID_Pair_t, typename _Edge_t
             static_cast<Base_t *>(this)->template get_access<Mode, ID_Pair_t, typename Edge_t::Data_t>(h)));
     }
 };
+template <Sycl_Graph::Edge_type Edge_t>
+auto edge_to_vectors(const std::vector<Edge_t> &edges)
+{
+    //reserve
+    std::vector<typename Edge_t::ID_Pair_t> ids(edges.size());
+    std::vector<typename Edge_t::Data_t> data(edges.size());
+    for (size_t i = 0; i < edges.size(); i++)
+    {
+        ids[i] = edges[i].id;
+        data[i] = edges[i].data;
+    }
+
+    return std::make_tuple(ids, data);
+}
+template <Sycl_Graph::Edge_type Edge_t>
+auto make_edge_buffer(sycl::queue &q, const std::vector<Edge_t> &edges, const sycl::property_list &props = {})
+{
+    auto [ids, data] = edge_to_vectors(edges);
+    return Edge_Buffer<Edge_t>(q, ids, data, props);
+}
 
 template <typename T>
 concept Edge_Buffer_type = Sycl_Graph::Edge_Buffer_type<T>;
