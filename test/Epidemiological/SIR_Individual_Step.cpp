@@ -108,18 +108,17 @@ int main() {
 
   std::cout << std::endl;
 
-  SIR_Individual_Population_Count_Extract_Op initial_pop_count;
-  SIR_Individual_Recovery_Op recovery_op(v_buf, p_R);
-  SIR_Individual_Population_Count_Transform_Op pop_count_op;
-  SIR_Individual_Infection_Op infection_op(e_buf, v_buf, p_I);
-  auto edge_seeds = generate_seed_buf(N_wg, seed);
+  auto ops = std::make_tuple(SIR_Individual_Population_Count<>{}, SIR_Individual_Recovery<>{});
+
+
+  auto seeds = generate_seed_buf(N_wg, seed);
 
   q.wait();
 
   // auto op_tuple = std::make_tuple(initial_pop_count, recovery_op, pop_count_op, infection_op);
-  // auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(edge_seeds), std::tuple<>{}, std::make_tuple(edge_seeds));
+  // auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds), std::tuple<>{}, std::make_tuple(seeds));
   auto op_tuple = std::make_tuple(initial_pop_count, recovery_op);
-  auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(edge_seeds));//, std::make_tuple(edge_seeds));
+  auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds));//, std::make_tuple(seeds));
 
 
   auto [source_bufs, target_bufs] = create_operation_buffer_sequence(graph, op_tuple);

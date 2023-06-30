@@ -120,9 +120,21 @@ static std::shared_ptr<spdlog::logger> Global_Operation_Logger =
     spdlog::basic_logger_mt("Global_Operation_Debug_Logger", Global_Operation_Log_File_Name, true);
 } // namespace logging
 
+template <typename T, sycl::access::mode _mode>
+struct Accessor_t
+{
+    typedef T type;
+    static constexpr sycl::access::mode mode = _mode;
+};
+
+template <typename T>
+concept Accessor_type = true;
+
+template <typename T>
+concept Accessor_types = tuple_like<T>;
 
 
-template <typename Derived, typename Source_t, typename Target_t>
+template <typename Derived, Accessor_types Accessors_t>
 struct Operation_Base
 {
     size_t ID;
@@ -130,9 +142,30 @@ struct Operation_Base
     std::shared_ptr<spdlog::logger> logger;
     std::shared_ptr<spdlog::logger> global_logger;
 
-    typedef std::tuple<> Accessor_Types;
-    static constexpr std::tuple<> graph_access_modes;
 
+
+
+    auto get_access(sycl::handler& h, Graph_type auto& graph, tuple_like auto& custom_buffers)
+    {
+
+        return std::apply([&](const auto ... acc)
+        {
+            return std::make_tuple(get_access<decltype(acc)>(h, graph, custom_buffers, acc.mode) ...);
+        }, Accessors_t{});
+    }
+
+    template <typename T>
+    auto get_access(sycl::handler& h, Graph_type auto& graph, tuple_like auto& custom_buffers, sycl::access::mode mode)
+    {
+        if constexpr (is_Vertex_type<T> || is_Edge_type<T>)
+        {
+            return graph.template get_access<T, mode>(h);
+        }
+        else
+        {
+            return std::get<T>(custom_buffers).get_access<mode>(h);
+        }
+    }
 
     Operation_Base(std::shared_ptr<spdlog::logger> logger)
         : logger(logger), global_logger(logging::Global_Operation_Logger)
@@ -152,7 +185,7 @@ struct Operation_Base
     }
 
     template <typename... Acc>
-    void __invoke(sycl::handler &h, Acc &&...acc)
+    void __invoke(sycl::handler &h, Graph_type auto& graph, const tuple_like auto&& source_bufs, tuple_like auto&& target_bufs, tuple_like auto&& custom_bufs)
     {
         logger->debug("Global invocation {}, local invocation {}",
                       logging::N_Global_Operation_Invocations++,
@@ -160,56 +193,36 @@ struct Operation_Base
         global_logger->debug("Global invocation {}, local invocation {}",
                              logging::N_Global_Operation_Invocations,
                              N_invocations);
-        (logging::log_accessor(global_logger, acc), ...);
-        (logging::log_accessor(logger, acc), ...);
-        return static_cast<Derived *>(this)->_invoke(std::forward<Acc>(acc)..., h);
+
+        auto [source_accs, target_accs] = get_access(h, graph, source_bufs, target_bufs, custom_bufs);
+        log_accessors(source_accs, target_accs);
+
+
+        return std::apply([&](const auto&& ... source_acc)
+        {
+            return std::apply([&](auto&& ... target_acc)
+            {
+                return static_cast<Derived*>(this)->invoke(h, source_acc ..., target_acc ...);
+            }, target_accs);
+        }, source_accs);
     }
 
-    template <typename... Acc>
-    void __invoke(sycl::handler &h, Acc &...acc)
+    private:
+
+    void log_accessors(const tuple_like auto& source_accs, const tuple_like auto& target_accs) const
     {
-        logger->debug("Global invocation {}, local invocation {}",
-                      logging::N_Global_Operation_Invocations++,
-                      N_invocations++);
-        global_logger->debug("Global invocation {}, local invocation {}",
-                             logging::N_Global_Operation_Invocations,
-                             N_invocations);
-        (logging::log_accessor(global_logger, acc), ...);
-        (logging::log_accessor(logger, acc), ...);
-        return static_cast<Derived *>(this)->_invoke(acc..., h);
+        std::apply([&](auto &&...acc) { (logging::log_accessor(logger, acc), ...); }, source_accs);
+        std::apply([&](auto &&...acc) { (logging::log_accessor(logger, acc), ...); }, target_accs);
+        //global
+        std::apply([&](auto &&...acc) { (logging::log_accessor(global_logger, acc), ...); }, source_accs);
+        std::apply([&](auto &&...acc) { (logging::log_accessor(global_logger, acc), ...); }, target_accs);
     }
+
 };
 
+template <typename Derived, Accessor_type First, Accessor_type... Rest>
+struct Operation_Base<Derived, std::tuple<First, Rest ...>>;
 
-template <typename Derived>
-struct Transform_Operation : public Operation_Base<Transform_Operation<Derived>>
-{
-    static constexpr sycl::access_mode target_access_mode = sycl::access_mode::write;
-    static constexpr std::array<sycl::access_mode, 0> custom_access_modes = {};
-    void _invoke(auto &custom_acc, const auto &source_acc, auto &target_acc, sycl::handler &h)
-    {
-        if constexpr (std::tuple_size_v<std::remove_reference_t<decltype(custom_acc)>> > 0)
-        {
-            static_cast<Derived *>(this)->invoke(custom_acc, source_acc, target_acc, h);
-        }
-        else
-        {
-            static_cast<Derived *>(this)->invoke(source_acc, target_acc, h);
-        }
-    }
-
-    template <typename Graph_t>
-    size_t source_buffer_size(const Graph_t &G) const
-    {
-        return static_cast<const Derived *>(this)->source_buffer_size(G);
-    }
-
-    template <typename Graph_t>
-    size_t target_buffer_size(const Graph_t &G) const
-    {
-        return static_cast<const Derived *>(this)->target_buffer_size(G);
-    }
-};
 
 } // namespace Sycl_Graph::Sycl
 
