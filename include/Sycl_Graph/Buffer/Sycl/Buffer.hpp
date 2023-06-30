@@ -4,6 +4,8 @@
 #include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
 #include <Sycl_Graph/Graph/Base/Graph_Types.hpp>
 #include <Sycl_Graph/type_helpers.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
 #include <algorithm>
 #include <concepts>
 #include <tuple>
@@ -92,16 +94,16 @@ struct Buffer
     }
 
         Buffer(sycl::queue &q, const std::vector<Ds>& ... data,
-               const sycl::property_list &props = {}, std::string logger_filename = "buffer_" + std::to_string(logging::Buffer_id++)): q(q), logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log")
+               const sycl::property_list &props = {}, std::string logger_filename = "buffer_" + std::to_string(logging::Buffer_id++)): q(q), logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log"))
                {
-        logger.set_level(spdlog::level::debug);
+        logger->set_level(spdlog::level::debug);
         this->bufs = std::make_tuple(
             std::make_shared<sycl::buffer<Ds, 1>>(sycl::buffer<Ds, 1>(data.data(), data.size(), props))...);
         curr_size = std::get<0>(bufs)->size();
-                logger.info("Buffer created with size {}", curr_size);
+                logger->info("Buffer created with size {}", curr_size);
                 std::string data_types = "";
-                ((data_types += type_name<Ds>() + ", "), ...);
-                logger.info("Buffer contains data types: {}", data_types);
+                ((data_types += std::string(typeid(Ds).name()) + ", "), ...);
+                logger->info("Buffer contains data types: {}", data_types);
                }
 
         uint32_t current_size() const {
