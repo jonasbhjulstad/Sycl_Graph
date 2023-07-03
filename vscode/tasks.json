@@ -6,7 +6,7 @@
         {
             "label": "configure Debug",
             "type": "shell",
-            "command": "cmake -B ${workspaceFolder}/build -S ${workspaceFolder} -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx -DSYCL_GRAPH_USE_CUDA=OFF -GNinja",
+            "command": "cmake -GNinja -B ${workspaceFolder}/build -S ${workspaceFolder} -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx -DSYCL_GRAPH_USE_CUDA=OFF",
             "problemMatcher": []
         },
         {

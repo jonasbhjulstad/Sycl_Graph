@@ -367,22 +367,14 @@ concept has_tuple_element = requires(T t) {
     } -> std::convertible_to<const std::tuple_element_t<N, T> &>;
 };
 
-template <class T>
-concept tuple_like = requires(T t) {
-    typename std::tuple_size<T>::type;
-    requires std::derived_from<std::tuple_size<T>, std::integral_constant<std::size_t, std::tuple_size_v<T>>>;
-} && []<std::size_t... N>(std::index_sequence<N...>) {
-    return (has_tuple_element<T, N> && ...);
-}(std::make_index_sequence<std::tuple_size_v<T>>());
+template <typename> struct is_tuple: std::false_type {};
 
-template <class T>
-concept nested_tuple_like = tuple_like<T> && requires(T tup)
-{
-    //check that all tuple elements are tuple_like
-    requires []<std::size_t... N>(std::index_sequence<N...>) {
-        return (tuple_like<std::tuple_element_t<N, T>> && ...);
-    }(std::make_index_sequence<std::tuple_size_v<T>>());
-};
+template <typename ...T> struct is_tuple<std::tuple<T...>>: std::true_type {};
+template <typename ...T> struct is_tuple<std::tuple<T...>&>: std::true_type {};
+template <typename ...T> struct is_tuple<std::tuple<T...>&&>: std::true_type {};
+
+template <typename T>
+concept tuple_type = is_tuple<T>::value;
 
 template <class... Args, std::size_t... Is>
 constexpr auto drop_tuple_tail_elem(std::tuple<Args...> tp, std::index_sequence<Is...>)

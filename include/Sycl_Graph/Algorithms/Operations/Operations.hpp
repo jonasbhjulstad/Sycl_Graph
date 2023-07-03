@@ -18,22 +18,19 @@ namespace Sycl_Graph::Sycl {
 
   template <Operation_type Op>
   sycl::event invoke_operation(Graph_type auto &graph, Op &operation,
-                               const tuple_like auto &&source_bufs, tuple_like auto &&target_bufs,
-                               tuple_like auto &custom_bufs, auto &dep_event) {
+                               const tuple_type auto &source_bufs, tuple_type auto &target_bufs,
+                               tuple_type auto &custom_bufs, auto &dep_event) {
     return graph.q.submit([&](sycl::handler &h) {
       h.depends_on(dep_event);
-      operation.__invoke(h, source_bufs, target_bufs, custom_bufs);
+      operation.__invoke(h, graph, source_bufs, target_bufs, custom_bufs);
     });
   }
 
-  sycl::event invoke_operation(Graph_type auto &G, tuple_like auto &&tuple) {
-    return std::apply([&](auto &&...tup) { return invoke_operation(G, tup...); });
-  }
 
   template <Operation_type... Op>
   auto invoke_operations(Graph_type auto &graph, std::tuple<Op...> &operations,
-                         tuple_like auto &source_bufs, tuple_like auto &target_bufs,
-                         tuple_like auto &custom_bufs,
+                         tuple_type auto &source_bufs, tuple_type auto &target_bufs,
+                         tuple_type auto &custom_bufs,
                          UniformTuple<sizeof...(Op), sycl::event> dep_events
                          = UniformTuple<sizeof...(Op), sycl::event>{}) {
     static_assert(!std::is_same_v<decltype(std::get<0>(target_bufs)), std::nullptr_t>);
@@ -45,7 +42,7 @@ namespace Sycl_Graph::Sycl {
   }
   template <Operation_type... Op>
   auto invoke_operations(Graph_type auto &graph, std::tuple<Op...> &operations,
-                         tuple_like auto &source_bufs, tuple_like auto &target_bufs,
+                         tuple_type auto &source_bufs, tuple_type auto &target_bufs,
                          UniformTuple<sizeof...(Op), sycl::event> dep_events
                          = UniformTuple<sizeof...(Op), sycl::event>{}) {
     static_assert(!std::is_same_v<decltype(std::get<0>(target_bufs)), std::nullptr_t>);
@@ -58,14 +55,14 @@ namespace Sycl_Graph::Sycl {
 
   template <Operation_type... Op>
   auto invoke_operation_sequence(Graph_type auto &graph, std::tuple<Op...> &operations,
-                                 tuple_like auto &source_bufs, tuple_like auto &target_bufs,
-                                 tuple_like auto &custom_bufs,
+                                 tuple_type auto &source_bufs, tuple_type auto &target_bufs,
+                                 tuple_type auto &custom_bufs,
                                  sycl::event dep_event = sycl::event{});
 
   template <Operation_type... Op>
   auto invoke_operation_sequence(Graph_type auto &graph, std::tuple<Op...> &operations,
-                                 tuple_like auto &source_bufs, tuple_like auto &target_bufs,
-                                 tuple_like auto &custom_bufs, sycl::event dep_event) {
+                                 tuple_type auto &source_bufs, tuple_type auto &target_bufs,
+                                 tuple_type auto &custom_bufs, sycl::event dep_event) {
     auto event = invoke_operation(graph, std::get<0>(operations), std::get<0>(source_bufs),
                                   std::get<0>(target_bufs), std::get<0>(custom_bufs), dep_event);
     if constexpr (std::tuple_size_v<std::tuple<Op...>> > 1) {
@@ -80,8 +77,8 @@ namespace Sycl_Graph::Sycl {
 
   template <Operation_type... Op>
   auto invoke_operation_sequence(Graph_type auto &graph, std::tuple<Op...> &&operations,
-                                 tuple_like auto &&source_bufs, tuple_like auto &&target_bufs,
-                                 tuple_like auto &&custom_bufs, sycl::event dep_event) {
+                                 tuple_type auto &&source_bufs, tuple_type auto &&target_bufs,
+                                 tuple_type auto &&custom_bufs, sycl::event dep_event) {
     auto event = invoke_operation(graph, std::get<0>(operations), std::get<0>(source_bufs),
                                   std::get<0>(target_bufs), std::get<0>(custom_bufs), dep_event);
 #ifdef OPERATION_DEBUG_TARGET_BUFS

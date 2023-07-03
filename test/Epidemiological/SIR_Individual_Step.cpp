@@ -7,33 +7,41 @@
 #include <Sycl_Graph/Epidemiological/Epidemiological.hpp>
 #include <Sycl_Graph/Graph/Base/Graph.hpp>
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
+#include <Sycl_Graph/Buffer/Sycl/Buffer_Routines.hpp>
 #include <iostream>
 #include <random>
 #include <spdlog/spdlog.h>
 using namespace Sycl_Graph::Epidemiological;
 using namespace Sycl_Graph::Sycl;
 
-template <typename ... Ts>
-void print_shared_ptr_use_count(std::tuple<Ts ...>& p_tup)
+void print_shared_ptr_use_count(auto& pp_tup)
 {
   auto print_count = [](auto&& ptr)
   {
     std::cout << ptr.use_count() << " ";
   };
+
+
   std::cout << "Shared_ptr use count: ";
-  std::apply([&](auto&& ... ptr)
+  auto tuple_print_count = [&](auto&& p_tup) {std::apply([&](auto&& ... ptr)
   {
     (print_count(ptr), ...);
-  }, p_tup);
+  }, p_tup);};
+
+  std::apply([&](auto&& ... pp)
+  {
+    (tuple_print_count(pp), ...);
+  }, pp_tup);
+
   std::cout << std::endl;
 }
 auto generate_nodes_edges(uint32_t N_pop, float p_ER, uint32_t seed) {
   std::vector<uint32_t> node_ids(N_pop);
   std::iota(node_ids.begin(), node_ids.end(), 0);
-  std::vector<SIR_Individual_Infection_Edge_t> links
-      = Sycl_Graph::random_connect<SIR_Individual_Infection_Edge_t>(node_ids, node_ids, p_ER, false, seed);
+  std::vector<SIR_Individual_Edge_t> links
+      = Sycl_Graph::random_connect<SIR_Individual_Edge_t>(node_ids, node_ids, p_ER, false, seed);
   // generate initial infections with p_I0
-  float p_I0 = 0.1f;
+  float p_I0 = 0.5f;
   // initialize mt
   std::mt19937 mt(seed);
   std::bernoulli_distribution dist(p_I0);
@@ -43,7 +51,7 @@ auto generate_nodes_edges(uint32_t N_pop, float p_ER, uint32_t seed) {
       node.data = dist(mt) ? SIR_INDIVIDUAL_I : SIR_INDIVIDUAL_S;
     }
   auto p_nodes = std::make_shared<std::vector<SIR_Individual_Vertex_t>>(nodes);
-  auto p_links = std::make_shared<std::vector<SIR_Individual_Infection_Edge_t>>(links);
+  auto p_links = std::make_shared<std::vector<SIR_Individual_Edge_t>>(links);
   return std::make_tuple(nodes, links);
 }
 
@@ -99,16 +107,21 @@ int main() {
     });
   }).wait();
 
-  //print
-  std::cout << "Initial population state: ";
-  for (auto&& state : popstate)
-  {
-    std::cout << (uint32_t) state << " \n";
-  }
+  // //print
+  // std::cout << "Initial population state: ";
+  // for (auto&& state : popstate)
+  // {
+  //   std::cout << (uint32_t) state << " \n";
+  // }
 
   std::cout << std::endl;
 
-  auto ops = std::make_tuple(SIR_Individual_Population_Count<>{}, SIR_Individual_Recovery<>{});
+  SIR_Individual_Population_Count<> vertex_count_op(N_pop);
+  SIR_Individual_Population_Count<SIR_Individual_State_t> state_count_op(N_pop);
+  SIR_Individual_Recovery<> recovery_op(0.1, N_wg);
+  SIR_Individual_Infection<> infection_op(0.1, N_wg);
+
+  auto ops = std::make_tuple(vertex_count_op, recovery_op, state_count_op, infection_op, state_count_op);
 
 
   auto seeds = generate_seed_buf(N_wg, seed);
@@ -117,8 +130,8 @@ int main() {
 
   // auto op_tuple = std::make_tuple(initial_pop_count, recovery_op, pop_count_op, infection_op);
   // auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds), std::tuple<>{}, std::make_tuple(seeds));
-  auto op_tuple = std::make_tuple(initial_pop_count, recovery_op);
-  auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds));//, std::make_tuple(seeds));
+  auto op_tuple = std::make_tuple(vertex_count_op, recovery_op);
+  auto custom_buffers = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds), std::make_tuple(seeds), std::tuple<>{});//, std::make_tuple(seeds));
 
 
   auto [source_bufs, target_bufs] = create_operation_buffer_sequence(graph, op_tuple);
@@ -126,15 +139,17 @@ int main() {
   print_shared_ptr_use_count(target_bufs);
 
 
-  // assert(std::get<0>(source_bufs) == nullptr);
-  // assert(std::get<1>(source_bufs) == nullptr);
-  // assert(std::get<2>(source_bufs) != nullptr);
-  // assert(std::get<3>(source_bufs) != nullptr);
-  // assert(std::get<4>(source_bufs) != nullptr);
+  auto assert_buf_tuple = [&](auto&& buf_tup)
+  {
+    std::apply([&](auto&& ... buf)
+    {
+      (assert(buf != nullptr), ...);
+    }, buf_tup);
+  };
 
   std::apply([&](auto&& ... p_buf)
   {
-    (assert(p_buf != nullptr), ...);
+    (assert_buf_tuple(p_buf), ...);
   }, target_bufs);
 
 
@@ -145,34 +160,15 @@ int main() {
 
   std::apply([&](auto&... events) { (events.wait(), ...); }, events);
 
-  // auto& initial_pop_buf = std::get<0>(target_bufs);
-  // auto& rec_pop_buf = std::get<2>(target_bufs);
-  // auto& inf_pop_buf = std::get<4>(target_bufs);
-
   q.wait();
-  // auto init_pop = Sycl_Graph::buffer_get(initial_pop_buf);
-  // auto rec_pop = Sycl_Graph::buffer_get(rec_pop_buf);
-  // // auto inf_pop = Sycl_Graph::buffer_get(inf_pop_buf);
-  // q.wait();
-  // // print pop bufs
-  // std::cout << "Initial population: " << std::endl;
-  // for (auto pop : init_pop) {
-  //   std::cout << pop << " ";
-  // }
-  // std::cout << std::endl;
 
-  // std::cout << "Recovered population: " << std::endl;
-  // for (auto pop : rec_pop) {
-  //   std::cout << pop << " ";
-  // }
+  Sycl_Graph::buffer_print(std::get<0>(target_bufs), q, "Initial Population");
+  Sycl_Graph::buffer_print(std::get)
 
-  // std::cout << std::endl;
 
-  // std::cout << "Infected population: " << std::endl;
-  // for (auto pop : inf_pop) {
-  //   std::cout << pop << " ";
-  // }
-  // std::cout << std::endl;
+  std::cout << std::endl;
+  std::cout << "Source buffers: \n";
+  Sycl_Graph::buffer_print(source_bufs, q);
 
   return 0;
 }
