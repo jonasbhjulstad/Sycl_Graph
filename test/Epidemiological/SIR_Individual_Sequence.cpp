@@ -116,47 +116,8 @@ int main() {
     q.wait();
 
     {
-      SIR_Individual_Population_Count<> vertex_count_op(N_pop);
-      SIR_Individual_Population_Count<SIR_Individual_State_t> state_count_op(N_pop);
-      SIR_Individual_Recovery<> recovery_op(0.1, N_wg);
-      SIR_Individual_Infection<SIR_Individual_State_t> infection_op(0.1, N_wg, N_pop);
+        auto [ops, buffers] = create_inplace_SIR_step(graph, p_I, p_R, N_wg);
 
-      auto ops = std::make_tuple(vertex_count_op, recovery_op, infection_op);
-
-      auto seeds = generate_seed_buf(N_wg, seed);
-      q.wait();
-      auto custom_buffers
-          = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds), std::make_tuple(seeds));
-
-      auto [source_bufs, target_bufs] = create_operation_buffer_sequence(graph, ops);
-      // check that target_buf size is the same as op size
-      static_assert(std::tuple_size_v<decltype(target_bufs)> == std::tuple_size_v<decltype(ops)>);
-      // check that source_buf size is the same as op size
-      static_assert(std::tuple_size_v<decltype(source_bufs)> == std::tuple_size_v<decltype(ops)>);
-      print_shared_ptr_use_count(target_bufs);
-
-      auto assert_buf_tuple = [&](auto&& buf_tup) {
-        std::apply([&](auto&&... buf) { (assert(buf != nullptr), ...); }, buf_tup);
-      };
-
-      std::apply([&](auto&&... p_buf) { (assert_buf_tuple(p_buf), ...); }, target_bufs);
-
-      q.wait();
-
-      auto events = invoke_operation_sequence(graph, ops, source_bufs, target_bufs, custom_buffers);
-
-      print_shared_ptr_use_count(target_bufs);
-
-      std::apply([&](auto&... events) { (events.wait(), ...); }, events);
-
-      q.wait();
-
-      std::apply(
-          [&](auto&&... buf_tup) {
-            (std::apply([&](auto&&... buf) { (population_print(q, buf), ...); }, buf_tup), ...);
-          },
-          target_bufs);
-      print_shared_ptr_use_count(target_bufs);
     }
 
   }

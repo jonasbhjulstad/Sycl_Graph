@@ -586,15 +586,24 @@ namespace Sycl_Graph {
     return std::apply([&](auto &...buf) { return buffer_combine(q, buf..., size0, size1); }, bufs);
   }
 
-  auto generate_seed_buf(uint32_t seed, uint32_t N_seeds, sycl::queue &q) {
-    std::mt19937 gen(seed);
-    sycl::buffer<uint32_t> seeds(N_seeds);
-    // generate random uint32_t numbers
-    std::vector<uint32_t> seed_vec(N_seeds);
-    std::generate(seed_vec.begin(), seed_vec.end(), gen);
-    buffer_add(seeds, seed_vec, q);
-    return seeds;
-  }
+  // auto generate_seed_buf(uint32_t seed, uint32_t N_seeds, sycl::queue &q) {
+  //   std::mt19937 gen(seed);
+  //   sycl::buffer<uint32_t> seeds(N_seeds);
+  //   // generate random uint32_t numbers
+  //   std::vector<uint32_t> seed_vec(N_seeds);
+  //   std::generate(seed_vec.begin(), seed_vec.end(), gen);
+  //   buffer_add(seeds, seed_vec, q);
+  //   return seeds;
+  // }
+
+  auto generate_seed_buf(uint32_t N, uint32_t seed) {
+  std::vector<uint32_t> vec(N);
+  std::iota(vec.begin(), vec.end(), 0);
+  std::mt19937 mt(seed);
+  std::generate(vec.begin(), vec.end(), [&]() { return mt(); });
+  return std::make_shared<sycl::buffer<uint32_t>>(
+      sycl::buffer<uint32_t>(vec.data(), sycl::range<1>(N)));
+}
 
 
   //Initialize sycl::buffer with data ownership tied to the scope of the buffer

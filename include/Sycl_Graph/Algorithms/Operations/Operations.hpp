@@ -131,6 +131,16 @@ namespace Sycl_Graph::Sycl {
     }
   }
 
+  template <Operation_type... Op>
+  auto invoke_operation_sequence(Graph_type auto &graph, std::tuple<Op...> &&operations,
+                                 tuple_type auto && buffers, sycl::event dep_event)
+                                 {
+                                  return invoke_operation_sequence(graph, operations, std::get<0>(buffers),
+                                                                  std::get<1>(buffers),
+                                                                  std::get<2>(buffers),
+                                                                  dep_event);
+                                 }
+
 
 }  // namespace Sycl_Graph::Sycl
 #endif
