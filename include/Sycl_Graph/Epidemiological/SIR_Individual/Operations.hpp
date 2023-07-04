@@ -14,12 +14,12 @@ namespace Sycl_Graph::Epidemiological {
                               Read_Accessors_t<Source_t>, Write_Accessors_t<Target_t>,
                               Atomic_Accessors_t<uint32_t>> {
     float p_R = 0.0f;
-    size_t N_seeds = 256;
-    SIR_Individual_Recovery(float p_R, size_t N_seeds) : p_R(p_R), N_seeds(N_seeds) {}
+    size_t N_wg = 256;
+    SIR_Individual_Recovery(float p_R, size_t N_wg) : p_R(p_R), N_wg(N_wg) {}
 
     void invoke(const auto &source_acc, auto &target_acc, auto &seed_acc, sycl::handler &h) {
       const float p_R = this->p_R;
-      const auto &state_acc = get_vertex_data_accessor<Source_t>(source_acc);
+      const auto state_acc = get_vertex_data_accessor<Source_t>(source_acc);
       auto N_vertices = state_acc.size();
       auto N_threads = std::min({N_vertices, seed_acc.size()});
       auto N_per_thread = N_vertices > N_threads ? N_vertices / N_threads : 1;
@@ -30,12 +30,11 @@ namespace Sycl_Graph::Epidemiological {
           auto idx = id * N_per_thread + i;
           if (idx > N_vertices) return;
           Static_RNG::bernoulli_distribution<float> dist(p_R);
-          target_acc[idx] = state_acc[idx];
-          target_acc[idx] = dist(rng) ? SIR_INDIVIDUAL_R : target_acc[idx];
+          target_acc[idx] = ((state_acc[idx] == SIR_INDIVIDUAL_I) && dist(rng)) ? SIR_INDIVIDUAL_R : state_acc[idx];
         }
       });
     }
-    template <typename T, typename Graph_t> size_t get_buffer_size(const Graph_t &G) const {
+    template <typename T, typename Graph_t> int get_buffer_size(const Graph_t &G) const {
 
       std::string T_name = typeid(T).name();
       if constexpr (std::is_same_v<T, SIR_Individual_State_t>) {
@@ -50,24 +49,44 @@ namespace Sycl_Graph::Epidemiological {
   struct SIR_Individual_Infection
       : public Operation_Base<SIR_Individual_Infection<Source_t, Target_t, Edge_t>,
                               Read_Accessors_t<Edge_t, Source_t>, Write_Accessors_t<Target_t>,
-                              Atomic_Accessors_t<uint32_t>> {
+                              ReadWrite_Accessors_t<uint32_t>> {
     float p_I = 0.0f;
-    size_t N_seeds = 256;
+    size_t N_wg = 256;
     size_t N_pop;
-    SIR_Individual_Infection(float p_I, size_t N_seeds, size_t N_pop = 0)
-        : p_I(p_I), N_seeds(N_seeds), N_pop(N_pop) {}
+    SIR_Individual_Infection(float p_I, size_t N_wg, size_t N_pop = 0)
+        : p_I(p_I), N_wg(N_wg), N_pop(N_pop) {}
+
+
+    //simple copy operation of states
+    void initialize(sycl::handler &h, const auto &edge_acc, const auto &source_acc, auto &target_acc, auto &seed_acc) {
+      size_t N_pop = source_acc.size();
+      size_t N_threads = std::min({N_pop, N_wg});
+      // divide the work among the threads
+      auto N_per_thread = N_pop / N_threads + 1;
+      const auto state_acc = get_vertex_data_accessor<Source_t>(source_acc);
+    std::cout << "Initializing infection target buffer ..." << std::endl;
+      h.parallel_for(N_threads, [=, this](sycl::id<1> id) {
+        size_t idx = 0;
+        for (size_t i = 0; i < N_per_thread; i++) {
+          idx = id * N_per_thread + i;
+          if (idx >= N_pop) break;
+          target_acc[idx] = state_acc[idx];
+        }
+      });
+    }
+
 
     void invoke(const auto &edge_acc, const auto &source_acc, auto &target_acc, auto &seed_acc,
                 sycl::handler &h) {
-      uint32_t N_threads = edge_acc.size();
-      uint32_t N_edges = edge_acc.size();
+      size_t N_edges = edge_acc.size();
+      size_t N_threads = std::min({N_edges, N_wg});
 
       // divide the work among the threads
       auto N_per_thread = N_edges / N_threads + 1;
-      const auto &state_acc = get_vertex_data_accessor<Source_t>(source_acc);
+      const auto state_acc = get_vertex_data_accessor<Source_t>(source_acc);
 
       h.parallel_for(N_threads, [=, this](sycl::id<1> id) {
-        auto seed = sycl::atomic_fetch_add<uint32_t>(seed_acc[id], 1);
+        auto seed = seed_acc[id]++;
         Static_RNG::default_rng rng(seed);
         size_t idx = 0;
         for (size_t i = 0; i < N_per_thread; i++) {
@@ -87,9 +106,10 @@ namespace Sycl_Graph::Epidemiological {
       });
     }
 
-    template <typename T, typename Graph_t> size_t get_buffer_sizes(const Graph_t &G) const {
-      if constexpr (std::is_same_v<T, uint32_t>) return N_seeds;
-      if (N_pop == 0 && is_Vertex_type<T>)
+
+    template <typename T, typename Graph_t> int get_buffer_size(const Graph_t &G) const {
+      if constexpr (std::is_same_v<T, uint32_t>) return N_wg;
+      if (is_Vertex_type<T>)
         return G.template current_size<Source_t>();
       else
         return N_pop;
@@ -98,7 +118,7 @@ namespace Sycl_Graph::Epidemiological {
 
   // Individual Infection Op: Chained with Individual Recovery Op as an inplace operation
   template <typename Source_t = SIR_Individual_Vertex_t> struct SIR_Individual_Population_Count
-      : public Operation_Base<SIR_Individual_Population_Count<Source_t>, Read_Accessors_t<Source_t>, Write_Accessors_t<uint32_t>, std::tuple<>> {
+      : public Operation_Base<SIR_Individual_Population_Count<Source_t>, Read_Accessors_t<Source_t>, ReadWrite_Accessors_t<uint32_t>, std::tuple<>> {
     size_t N_pop = 0;
     SIR_Individual_Population_Count(size_t N_pop = 0) : N_pop(N_pop) {}
     void invoke(const auto &source_acc, auto &target_acc, sycl::handler &h) {
@@ -119,7 +139,7 @@ namespace Sycl_Graph::Epidemiological {
             N_recovered++;
           } else {
 #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
-            out << "Invalid state: " << (uint32_t)target_acc[i] << "at idx: " << i << sycl::endl;
+            out << "Invalid state: " << (uint32_t)state_acc[i] << "at idx: " << i << sycl::endl;
 #endif
           }
         }
@@ -133,11 +153,11 @@ namespace Sycl_Graph::Epidemiological {
 #endif
       });
     }
-    template <typename T, typename Graph_t> size_t get_buffer_size(const Graph_t &G) const {
+    template <typename T, typename Graph_t> int get_buffer_size(const Graph_t &G) const {
       if (N_pop == 0 && is_Vertex_type<T>)
         return G.template current_size<Source_t>();
       else
-        return N_pop;
+        return 3;
     }
   };
 }

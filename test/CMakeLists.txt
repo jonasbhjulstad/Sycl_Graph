@@ -11,3 +11,5 @@ add_subdirectory(Operations)
 add_subdirectory(Epidemiological)
 # add_subdirectory(Generation)
 # add_subdirectory(Sycl)
+
+add_subdirectory(Tuple)

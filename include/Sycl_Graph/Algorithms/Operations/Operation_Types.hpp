@@ -12,6 +12,7 @@
 #include <type_traits>
 namespace Sycl_Graph::Sycl {
 
+  static constexpr int OPERATION_SIZE_INHERITED = -1;
   template <typename T>
   concept has_Graph_Iterator = true;
 
@@ -62,6 +63,13 @@ namespace Sycl_Graph::Sycl {
     char dummy;
   };
 
+  template <typename Op, typename... Args>
+  concept op_initialize_type
+      = Operation_type<Op> && requires(Op op, Args... args) { op.initialize(args...); };
+
+  template <typename Op, typename... Args> static constexpr bool has_initialize
+      = op_initialize_type<Op, Args...>;
+
   namespace logging {
 
     template <sycl::access_mode mode, Vertex_type Vertex_t>
@@ -71,14 +79,16 @@ namespace Sycl_Graph::Sycl {
     }
 
     template <sycl::access_mode mode, Edge_type Edge_t>
-    void log_accessor(std::shared_ptr<spdlog::logger> logger, const Edge_Accessor<mode, Edge_t>& e_acc) {
+    void log_accessor(std::shared_ptr<spdlog::logger> logger,
+                      const Edge_Accessor<mode, Edge_t>& e_acc) {
       logger->debug("Edge_Accessor\ttype: {}\tcount: {}", typeid(Edge_t).name(), e_acc.size());
     }
     template <typename DataT, int Dimensions, sycl::access::mode AccessMode,
               sycl::access::target AccessTarget, sycl::access::placeholder IsPlaceholder,
               typename PropertyListT>
-    void log_accessor(auto& logger, const sycl::accessor<DataT, Dimensions, AccessMode, AccessTarget,
-                                                   IsPlaceholder, PropertyListT>& acc) {
+    void log_accessor(auto& logger,
+                      const sycl::accessor<DataT, Dimensions, AccessMode, AccessTarget,
+                                           IsPlaceholder, PropertyListT>& acc) {
       logger->debug("Accessor\ttype: {}\tcount: {}", typeid(DataT).name(), acc.size());
     }
     template <typename... Ts>
@@ -125,7 +135,6 @@ namespace Sycl_Graph::Sycl {
 
   template <Accessor_type T> static constexpr bool is_source_accessor
       = T::mode == sycl::access_mode::read;
-
   template <typename Derived, Accessor_types _Source_Accessors_t,
             Accessor_types _Target_Accessors_t, Accessor_types _Custom_Accessors_t = std::tuple<>>
   struct Operation_Base {
@@ -185,6 +194,96 @@ namespace Sycl_Graph::Sycl {
           std::string("Operation_Debug_") + std::to_string(ID) + std::string(".log"), true);
       logger->flush_on(spdlog::level::debug);
     }
+    template <typename... Args> void initialize(sycl::handler& h, const Args&... args) {
+      std::cout << "Op does not have initialize" << std::endl;
+    }
+
+    template <typename... Acc, tuple_type Custom_Bufs_t>
+    std::enable_if_t<(std::tuple_size_v < Custom_Bufs_t >> 0), void> _invoke(
+        sycl::handler& h, Graph_type auto& graph, const tuple_type auto& source_bufs,
+        tuple_type auto& target_bufs, Custom_Bufs_t& custom_bufs) {
+      auto accessors = get_access(h, graph, source_bufs, target_bufs, custom_bufs);
+      auto& source_accs = std::get<0>(accessors);
+      auto& target_accs = std::get<1>(accessors);
+      auto& custom_accs = std::get<2>(accessors);
+      std::apply(
+          [&](auto&... custom_acc) {
+            std::apply(
+                [&](const auto&... source_acc) {
+                  std::apply(
+                      [&](auto&... target_acc) {
+                        static_cast<Derived*>(this)->invoke(source_acc..., target_acc...,
+                                                            custom_acc..., h);
+                      },
+                      target_accs);
+                },
+                source_accs);
+          },
+          custom_accs);
+    }
+
+    template <typename... Acc, tuple_type Custom_Bufs_t>
+    std::enable_if_t<std::tuple_size_v<Custom_Bufs_t> == 0, void> _invoke(
+        sycl::handler& h, Graph_type auto& graph, const tuple_type auto& source_bufs,
+        tuple_type auto& target_bufs, Custom_Bufs_t& custom_bufs) {
+      auto accessors = get_access(h, graph, source_bufs, target_bufs, custom_bufs);
+      auto& source_accs = std::get<0>(accessors);
+      auto& target_accs = std::get<1>(accessors);
+      // invocation
+      std::apply(
+          [&](const auto&... source_acc) {
+            std::apply(
+                [&](auto&... target_acc) {
+                  static_cast<Derived*>(this)->invoke(source_acc..., target_acc..., h);
+                },
+                target_accs);
+          },
+          source_accs);
+    }
+
+    template <typename... Acc, typename ... Custom_Buf_Ts>
+    void __initialize(
+        sycl::handler& h, Graph_type auto& graph, const tuple_type auto& source_bufs,
+        tuple_type auto& target_bufs, std::tuple<Custom_Buf_Ts ...>& custom_bufs) {
+      auto accessors = get_access(h, graph, source_bufs, target_bufs, custom_bufs);
+      auto& source_accs = std::get<0>(accessors);
+      auto& target_accs = std::get<1>(accessors);
+      auto& custom_accs = std::get<2>(accessors);
+      std::apply(
+          [&](auto&... custom_acc) {
+            std::apply(
+                [&](const auto&... source_acc) {
+                  std::apply(
+                      [&](auto&... target_acc) {
+                        static_cast<Derived*>(this)->initialize(h, source_acc..., target_acc...,
+                                                                custom_acc...);
+                      },
+                      target_accs);
+                },
+                source_accs);
+          },
+          custom_accs);
+    }
+
+    template <typename... Acc>
+    void __initialize(
+        sycl::handler& h, Graph_type auto& graph, const tuple_type auto& source_bufs,
+        tuple_type auto& target_bufs, const std::tuple<>& custom_bufs) {
+      auto accessors = get_access(h, graph, source_bufs, target_bufs, custom_bufs);
+      auto& source_accs = std::get<0>(accessors);
+      auto& target_accs = std::get<1>(accessors);
+      // invocation
+      std::apply(
+          [&](const auto&... source_acc) {
+            std::apply(
+                [&](auto&... target_acc) {
+                  static_cast<Derived*>(this)->initialize(h, source_acc..., target_acc...);
+                },
+                target_accs);
+          },
+          source_accs);
+    }
+
     template <typename... Acc>
     void __invoke(sycl::handler& h, Graph_type auto& graph, const tuple_type auto& source_bufs,
                   tuple_type auto& target_bufs, tuple_type auto& custom_bufs) {
@@ -192,38 +291,7 @@ namespace Sycl_Graph::Sycl {
                     logging::N_Global_Operation_Invocations++, N_invocations++);
       global_logger->debug("Global invocation {}, local invocation {}",
                            logging::N_Global_Operation_Invocations, N_invocations);
-      auto accessors = get_access(h, graph, source_bufs, target_bufs, custom_bufs);
-      auto& source_accs = std::get<0>(accessors);
-      auto& target_accs = std::get<1>(accessors);
-
-      if constexpr (std::tuple_size_v<std::remove_reference_t<decltype(custom_bufs)>> > 0) {
-        auto& custom_accs = std::get<2>(accessors);
-
-        log_accessors(source_accs, target_accs, custom_accs);
-        std::apply(
-            [&](auto&... custom_acc) {
-              std::apply(
-                  [&](const auto&... source_acc) {
-                    std::apply(
-                        [&](auto&... target_acc) {
-                          static_cast<Derived*>(this)->invoke(source_acc..., target_acc...,
-                                                              custom_acc..., h);
-                        },
-                        target_accs);
-                  },
-                  source_accs);
-            },
-            custom_accs);
-      } else
-        std::apply(
-            [&](const auto&... source_acc) {
-              std::apply(
-                  [&](auto&... target_acc) {
-                    static_cast<Derived*>(this)->invoke(source_acc..., target_acc..., h);
-                  },
-                  target_accs);
-            },
-            source_accs);
+      _invoke(h, graph, source_bufs, target_bufs, custom_bufs);
     }
 
     // private:

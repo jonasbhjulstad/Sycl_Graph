@@ -45,7 +45,7 @@ namespace Sycl_Graph::Sycl {
     auto target_buffers = std::apply(
         [&](auto&&... op) { return std::make_tuple(create_target_buffers(G, op)...); }, operations);
     auto source_buffers
-        = std::make_tuple(source_bufs_0, drop_last_tuple_elem(target_buffers));
+        = std::tuple_cat(std::make_tuple(source_bufs_0), drop_last_tuple_elem(target_buffers));
 
     // verify_buffer_types(source_buffers, target_buffers);
     auto elem_test = std::get<0>(std::get<0>(source_buffers));
