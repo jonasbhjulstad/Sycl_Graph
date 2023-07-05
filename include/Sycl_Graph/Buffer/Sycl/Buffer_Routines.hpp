@@ -8,7 +8,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
-namespace Sycl_Graph {
+namespace Sycl_Graph::Sycl {
   // using namespace oneapi::dpl::experimental;
 
   template <typename T>

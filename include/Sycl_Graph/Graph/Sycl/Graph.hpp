@@ -75,10 +75,22 @@ namespace Sycl_Graph::Sycl {
       return buf.template get_access<Mode>(h);
     }
 
+    template <typename T>
+    auto get_buffer()
+    {
+      if constexpr (is_Vertex_type<T>)
+      {
+        return this->vertex_buf.template get_buffer<typename T::ID_t, typename T::Data_t>();
+      }
+      else if constexpr (is_Edge_type<T>)
+      {
+        return this->edge_buf.template get_buffer<typename T::ID_Pair_t, typename T::Data_t>();
+      }
+    }
+
     template <sycl::access_mode Mode, typename T>
     auto get_access(sycl::handler& h)
     {
-      // static_assert(this->template has_Vertex_type<T> || this->template has_Edge_type<T>);
       if constexpr(is_Vertex_type<T>)
       {
         return get_vertex_access<Mode, T>(h);

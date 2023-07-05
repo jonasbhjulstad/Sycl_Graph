@@ -16,7 +16,7 @@ using namespace Sycl_Graph::Epidemiological;
 using namespace Sycl_Graph::Sycl;
 
 template <typename T> void population_print(sycl::queue& q, std::shared_ptr<sycl::buffer<T>> buf) {
-  auto vec = Sycl_Graph::buffer_get(*buf, q);
+  auto vec = buffer_get(*buf, q);
 
   uint32_t S = 0;
   uint32_t I = 0;
@@ -104,8 +104,8 @@ int main() {
   std::cout << "Number of links: " << links.size() << std::endl;
 
   {
-    SIR_Individual_Edge_Buffer_t e_buf = make_edge_buffer(q, links);
-    SIR_Individual_Vertex_Buffer_t v_buf = make_vertex_buffer(q, nodes);
+    auto e_buf = make_edge_buffer(q, links);
+    auto v_buf = make_vertex_buffer(q, nodes);
 
     Sycl_Graph::Buffer_Pack vertex_buffer(v_buf);
     Sycl_Graph::Buffer_Pack edge_buffer(e_buf);
@@ -123,7 +123,7 @@ int main() {
 
       auto ops = std::make_tuple(vertex_count_op, recovery_op, infection_op);
 
-      auto seeds = generate_seed_buf(N_wg, seed);
+      auto seeds = Sycl_Graph::Sycl::generate_seed_buf(N_wg, seed);
       q.wait();
       auto custom_buffers
           = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds), std::make_tuple(seeds));

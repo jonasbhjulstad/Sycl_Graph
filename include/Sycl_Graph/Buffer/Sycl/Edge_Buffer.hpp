@@ -134,7 +134,7 @@ template <Sycl_Graph::Edge_type Edge_t>
 auto make_edge_buffer(sycl::queue &q, const std::vector<Edge_t> &edges, const sycl::property_list &props = {})
 {
     auto [ids, data] = edge_to_vectors(edges);
-    return Edge_Buffer<Edge_t>(q, ids, data, props);
+    return std::make_shared<Edge_Buffer<Edge_t>>(Edge_Buffer<Edge_t>(q, ids, data, props));
 }
 
 template <typename T>

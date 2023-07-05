@@ -20,7 +20,7 @@ namespace Sycl_Graph::Sycl
         template <sycl::access_mode Mode, typename Buffer_t>
         auto get_access(sycl::handler &h)
         {
-            return this->template get_buffer<Buffer_t>().template get_access<Mode>(h);
+            return this->template get_buffer<Buffer_t>()->template get_access<Mode>(h);
         }
     };
 

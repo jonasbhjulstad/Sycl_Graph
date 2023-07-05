@@ -48,6 +48,7 @@ struct Vertex_Accessor : public Buffer_Accessor<Mode, typename Vertex_t::ID_t, t
     }
 };
 
+
 template <Sycl_Graph::Vertex_type Vertex_t>
 auto vertex_to_vectors(const std::vector<Vertex_t> &vertices)
 {
@@ -147,13 +148,14 @@ struct Vertex_Buffer : public Buffer<typename _Vertex_t::ID_t, typename _Vertex_
     {
         this->template remove_elements<uint32_t>(ids);
     }
+
 };
 
 template <Sycl_Graph::Vertex_type Vertex_t>
 auto make_vertex_buffer(sycl::queue &q, const std::vector<Vertex_t> &vertices, const sycl::property_list &props = {})
 {
     auto [ids, data] = vertex_to_vectors(vertices);
-    return Vertex_Buffer<Vertex_t>(q, ids, data, props);
+    return std::make_shared<Vertex_Buffer<Vertex_t>>(Vertex_Buffer<Vertex_t>(q, ids, data, props));
 }
 
 template <typename T>

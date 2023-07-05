@@ -6,8 +6,8 @@
 
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Edge_Operations.hpp>
-#include <Sycl_Graph/Algorithms/Operations/Operation_Buffers.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Operation_Types.hpp>
+#include <Sycl_Graph/Algorithms/Operations/Operation_Buffers.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Vertex_Operations.hpp>
 #include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
@@ -20,10 +20,9 @@ namespace Sycl_Graph::Sycl {
   sycl::event invoke_operation(Graph_type auto &graph, Op &operation,
                                const tuple_type auto &source_bufs, tuple_type auto &target_bufs,
                                tuple_type auto &custom_bufs, auto &dep_event) {
-    auto init_event = graph.q.submit([&](sycl::handler& h)
-    {
+    auto init_event = graph.q.submit([&](sycl::handler &h) {
       h.depends_on(dep_event);
-      operation.__initialize(h, graph, source_bufs, target_bufs, custom_bufs);
+      operation._initialize(h, graph, source_bufs, target_bufs, custom_bufs);
     });
 
     return graph.q.submit([&](sycl::handler &h) {
@@ -133,14 +132,77 @@ namespace Sycl_Graph::Sycl {
 
   template <Operation_type... Op>
   auto invoke_operation_sequence(Graph_type auto &graph, std::tuple<Op...> &&operations,
-                                 tuple_type auto && buffers, sycl::event dep_event)
-                                 {
-                                  return invoke_operation_sequence(graph, operations, std::get<0>(buffers),
-                                                                  std::get<1>(buffers),
-                                                                  std::get<2>(buffers),
-                                                                  dep_event);
-                                 }
+                                 tuple_type auto &&buffers, sycl::event dep_event) {
+    return invoke_operation_sequence(graph, operations, std::get<0>(buffers), std::get<1>(buffers),
+                                     std::get<2>(buffers), dep_event);
+  }
 
+  template <typename Derived, Accessor_type... Acc_Ts> struct Operation_Base {
+    size_t ID;
+    size_t N_invocations = 0;
+    std::shared_ptr<spdlog::logger> logger;
+    std::shared_ptr<spdlog::logger> global_logger;
+
+    typedef std::tuple<Accessor_t<typename Acc_Ts::type, Acc_Ts::mode>...> Accessors_t;
+
+    static constexpr Accessors_t accessors = Accessors_t{};
+    static constexpr std::array<sycl::access::mode, sizeof...(Acc_Ts)> access_modes
+        = {Acc_Ts::mode...};
+
+    std::tuple<std::pair<typename Acc_Ts::type, size_t>...> _size_map;
+
+    template <typename T> void set_size(size_t size) {
+      std::get<std::pair<T, size_t>>(_size_map).second = size;
+    }
+
+    template <typename T> size_t get_size() {
+      return std::get<std::pair<T, size_t>>(_size_map).second;
+    }
+
+    Operation_Base(const char *name, const char *log_file_name)
+        : ID(logging::N_Operation_Loggers++), global_logger(logging::Global_Operation_Logger) {
+      logger = spdlog::basic_logger_mt(name, log_file_name, true);
+      logger->flush_on(spdlog::level::debug);
+    }
+    Operation_Base()
+        : ID(logging::N_Operation_Loggers++), global_logger(logging::Global_Operation_Logger) {
+      logger = spdlog::basic_logger_mt(
+          "operation_logger_" + std::to_string(ID),
+          std::string("Operation_Debug_") + std::to_string(ID) + std::string(".log"), true);
+      logger->flush_on(spdlog::level::debug);
+    }
+    template <typename... Args> void initialize(sycl::handler &h, const Args &...args) {}
+
+    void _initialize(sycl::handler &h, Graph_type auto &graph, tuple_type auto &bufs) {
+      auto accessors = operation_buffer_access<Acc_Ts::mode...>(h, graph, bufs);
+
+      // invocation
+      std::apply([&](auto &...acc) { static_cast<Derived *>(this)->initialize(h, acc...); },
+                 accessors);
+      log_accessors(accessors);
+    }
+
+    template <typename... Acc>
+    void __invoke(sycl::handler &h, Graph_type auto &graph, const tuple_type auto &bufs) {
+      logger->debug("Global invocation {}, local invocation {}",
+                    logging::N_Global_Operation_Invocations++, N_invocations++);
+      global_logger->debug("Global invocation {}, local invocation {}",
+                           logging::N_Global_Operation_Invocations, N_invocations);
+      auto accessors = operation_buffer_access<Acc_Ts::mode...>(h, graph, bufs, access_modes);
+
+      log_accessors(accessors);
+
+      std::apply([&](auto &...acc) { static_cast<Derived *>(this)->invoke(h, acc...); }, accessors);
+    }
+
+    // private:
+    void log_accessors(const tuple_type auto &accessors) const {
+      std::apply([&](auto &&...acc) { (logging::log_accessor(logger, acc), ...); }, accessors);
+      // global
+      std::apply([&](auto &&...acc) { (logging::log_accessor(global_logger, acc), ...); },
+                 accessors);
+    }
+  };
 
 }  // namespace Sycl_Graph::Sycl
 #endif

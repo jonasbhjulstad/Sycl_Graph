@@ -45,6 +45,9 @@ namespace Sycl_Graph
     template <typename T>
     static constexpr bool has_Vertex_type = is_Vertex_type<T> && Vertex_Buffer_t::template is_Data_types<typename T::Data_t>;
 
+    template <typename T>
+    static constexpr bool has_type = has_Edge_type<T> || has_Vertex_type<T>;
+
     void resize(uint32_t NV_new, uint32_t NE_new)
     {
       vertex_buf.resize(NV_new);
