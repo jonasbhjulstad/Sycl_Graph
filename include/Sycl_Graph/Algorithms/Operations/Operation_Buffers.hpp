@@ -35,7 +35,7 @@ namespace Sycl_Graph::Sycl {
   auto create_operation_buffer_sequence(const Graph_t& G, const std::tuple<Op...>& operations) {
     using Op_0 = std::tuple_element_t<0, std::tuple<Op...>>;
     const auto& op_0 = std::get<0>(operations);
-    auto source_bufs_0 = find_create_buffers(G, Op_0::source_accessors);
+    auto source_bufs_0 = find_create_buffers(G, Op_0::accessors);
 
     auto target_buffers = find_create_target_buffers(G, operations);
     auto source_buffers
