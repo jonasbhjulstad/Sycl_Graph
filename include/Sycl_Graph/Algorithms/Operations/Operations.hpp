@@ -6,8 +6,8 @@
 
 #include <CL/sycl.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Edge_Operations.hpp>
-#include <Sycl_Graph/Algorithms/Operations/Operation_Types.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Operation_Buffers.hpp>
+#include <Sycl_Graph/Algorithms/Operations/Operation_Types.hpp>
 #include <Sycl_Graph/Algorithms/Operations/Vertex_Operations.hpp>
 #include <Sycl_Graph/Buffer/Sycl/type_helpers.hpp>
 #include <Sycl_Graph/Graph/Sycl/Graph.hpp>
@@ -151,6 +151,9 @@ namespace Sycl_Graph::Sycl {
 
     std::tuple<std::pair<typename Acc_Ts::type, size_t>...> _size_map;
 
+    template <std::size_t I> void set_size(size_t size) { std::get<I>(_size_map).second = size; }
+
+    template <std::size_t I> size_t get_size() { return std::get<I>(_size_map).second; }
     template <typename T> void set_size(size_t size) {
       std::get<std::pair<T, size_t>>(_size_map).second = size;
     }
@@ -174,6 +177,8 @@ namespace Sycl_Graph::Sycl {
     template <typename... Args> void initialize(sycl::handler &h, const Args &...args) {}
 
     void _initialize(sycl::handler &h, Graph_type auto &graph, tuple_type auto &bufs) {
+
+
       auto accessors = operation_buffer_access<Acc_Ts::mode...>(h, graph, bufs);
 
       // invocation
@@ -201,6 +206,33 @@ namespace Sycl_Graph::Sycl {
       // global
       std::apply([&](auto &&...acc) { (logging::log_accessor(global_logger, acc), ...); },
                  accessors);
+    }
+
+    template <Operation_Buffer_Type obt, Accessor_type Acc_t>
+    auto create_buffer(const Graph_type auto &graph, const Acc_t &acc) const {
+      using Acc_type = typename Acc_t::type;
+      if constexpr (Acc_t::buffer_type == obt) {
+        size_t size = 0;
+
+        if constexpr (graph.template has_type<Acc_type>()) {
+          size = graph.template current_size<Acc_type>();
+        } else {
+          size = this->template get_size<Acc_type>();
+        }
+
+        return std::make_shared<sycl::buffer<Acc_type>>(
+            sycl::buffer<Acc_type>((sycl::range<1>(size))));
+      } else {
+        return std::shared_ptr<sycl::buffer<Acc_type>>();
+      }
+    }
+
+    template <Operation_Buffer_Type obt> auto create_buffers(const Graph_type auto &graph) const {
+      return std::apply(
+          [&](auto &&...acc) {
+            return std::make_tuple(this->template create_buffer<obt>(graph, acc)...);
+          },
+          accessors);
     }
   };
 

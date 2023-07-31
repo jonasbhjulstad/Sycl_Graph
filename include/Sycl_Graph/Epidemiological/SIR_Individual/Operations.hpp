@@ -63,7 +63,11 @@ namespace Sycl_Graph::Epidemiological {
     SIR_Individual_Infection(float p_I, size_t N_wg, size_t N_pop = 0)
         : p_I(p_I), N_wg(N_wg), N_pop(N_pop) {
       this->template set_size<uint32_t>(N_wg);
-      if constexpr (!is_Vertex_type<Source_t>) this->template set_size<Source_t>(N_pop);
+      if constexpr (!is_Vertex_type<Source_t>)
+      {
+        this->template set_size<0>(N_pop);
+        this->template set_size<1>(N_pop);
+      }
     }
 
     // simple copy operation of states
@@ -132,13 +136,16 @@ namespace Sycl_Graph::Epidemiological {
 
   // Individual Infection Op: Chained with Individual Recovery Op as an inplace operation
   template <typename Source_t = SIR_Individual_Vertex_t> struct SIR_Individual_Population_Count
-      : public Operation_Base<SIR_Individual_Population_Count<Source_t>,
-                              Accessor_t<Source_t, sycl::access_mode::read>,
-                              Accessor_t<SIR_Individual_State_t, sycl::access_mode::write, Source_t>> {
+      : public Operation_Base<
+            SIR_Individual_Population_Count<Source_t>,
+            Accessor_t<Source_t, sycl::access_mode::read>,
+            Accessor_t<SIR_Individual_State_t, sycl::access_mode::write, Source_t>> {
     size_t N_pop = 0;
-    SIR_Individual_Population_Count(size_t N_pop = 0) : N_pop(N_pop)
-    {
-      if constexpr (!is_Vertex_type<Source_t>) this->template set_size<Source_t>(N_pop);
+    SIR_Individual_Population_Count(size_t N_pop = 0) : N_pop(N_pop) {
+      if constexpr (!is_Vertex_type<Source_t>) {
+        this->template set_size<0>(N_pop);
+        this->template set_size<1>(N_pop);
+      }
     }
     void invoke(const auto &source_acc, auto &target_acc, sycl::handler &h) {
 #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
