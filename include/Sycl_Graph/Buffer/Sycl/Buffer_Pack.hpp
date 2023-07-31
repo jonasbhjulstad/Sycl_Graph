@@ -15,8 +15,6 @@ namespace Sycl_Graph::Sycl
         using Base_t::get_buffer;
         using Base_t::Base_t;
 
-
-
         template <sycl::access_mode Mode, typename Buffer_t>
         auto get_access(sycl::handler &h)
         {

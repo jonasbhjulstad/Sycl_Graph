@@ -10,18 +10,6 @@
 namespace Sycl_Graph::Sycl
 {
 
-template <typename T>
-auto get_vertex_data_accessor(const auto& acc)
-{
-    if constexpr (is_Vertex_type<T>)
-    {
-        return acc.data;
-    }
-    else
-    {
-        return acc;
-    }
-}
 
 template <sycl::access::mode Mode, Sycl_Graph::Vertex_type Vertex_t>
 struct Vertex_Accessor : public Buffer_Accessor<Mode, typename Vertex_t::ID_t, typename Vertex_t::Data_t>
@@ -48,6 +36,17 @@ struct Vertex_Accessor : public Buffer_Accessor<Mode, typename Vertex_t::ID_t, t
     }
 };
 
+template <typename T, sycl::access::mode Mode>
+const auto& get_vertex_data_accessor(const sycl::accessor<T, 1, Mode>& acc)
+{
+    return acc;
+}
+
+template <sycl::access::mode Mode, Sycl_Graph::Vertex_type Vertex_t>
+const auto& get_vertex_data_accessor(const Vertex_Accessor<Mode, Vertex_t> &acc)
+{
+    return acc.data;
+}
 
 template <Sycl_Graph::Vertex_type Vertex_t>
 auto vertex_to_vectors(const std::vector<Vertex_t> &vertices)

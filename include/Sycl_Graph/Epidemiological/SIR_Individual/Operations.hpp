@@ -11,18 +11,18 @@ namespace Sycl_Graph::Epidemiological {
   template <typename Source_t = SIR_Individual_Vertex_t, typename Target_t = SIR_Individual_State_t>
   struct SIR_Individual_Recovery
       : public Operation_Base<SIR_Individual_Recovery<Source_t, Target_t>,
-                              Accessor_t<Source_t, sycl::access_mode::read>,
-                              Accessor_t<Target_t, sycl::access_mode::write>,
-                              Accessor_t<uint32_t, sycl::access_mode::read_write>> {
+                              Accessor_t<Source_t, sycl::access_mode::read, OPERATION_BUFFER_SOURCE>,
+                              Accessor_t<Target_t, sycl::access_mode::write, OPERATION_BUFFER_TARGET>,
+                              Accessor_t<uint32_t, sycl::access_mode::read_write, OPERATION_BUFFER_CUSTOM>> {
     float p_R = 0.0f;
     size_t N_wg = 256;
     SIR_Individual_Recovery(float p_R, size_t N_wg) : p_R(p_R), N_wg(N_wg) {
       this->template set_size<uint32_t>(N_wg);
     }
 
-    void invoke(const auto &source_acc, auto &target_acc, auto &seed_acc, sycl::handler &h) {
+    void invoke(sycl::handler &h, const auto &source_acc, auto &target_acc, auto &seed_acc) {
       const float p_R = this->p_R;
-      const auto state_acc = get_vertex_data_accessor<Source_t>(source_acc);
+      const auto state_acc = get_vertex_data_accessor(source_acc);
       auto N_vertices = state_acc.size();
       auto N_threads = std::min({N_vertices, seed_acc.size()});
       auto N_per_thread = N_vertices > N_threads ? N_vertices / N_threads : 1;
@@ -53,10 +53,10 @@ namespace Sycl_Graph::Epidemiological {
             Edge_type Edge_t = SIR_Individual_Edge_t>
   struct SIR_Individual_Infection
       : public Operation_Base<SIR_Individual_Infection<Source_t, Target_t, Edge_t>,
-                              Accessor_t<Edge_t, sycl::access_mode::read>,
-                              Accessor_t<Source_t, sycl::access_mode::read>,
-                              Accessor_t<Target_t, sycl::access_mode::write, Source_t>,
-                              Accessor_t<uint32_t, sycl::access_mode::read_write>> {
+                              Accessor_t<Edge_t, sycl::access_mode::read, OPERATION_BUFFER_SOURCE>,
+                              Accessor_t<Source_t, sycl::access_mode::read, OPERATION_BUFFER_SOURCE>,
+                              Accessor_t<Target_t, sycl::access_mode::write, OPERATION_BUFFER_TARGET>,
+                              Accessor_t<uint32_t, sycl::access_mode::read_write, OPERATION_BUFFER_CUSTOM>> {
     float p_I = 0.0f;
     size_t N_wg = 256;
     size_t N_pop;
@@ -77,7 +77,7 @@ namespace Sycl_Graph::Epidemiological {
       size_t N_threads = std::min({N_pop, N_wg});
       // divide the work among the threads
       auto N_per_thread = N_pop / N_threads + 1;
-      const auto state_acc = get_vertex_data_accessor<Source_t>(source_acc);
+      const auto state_acc = get_vertex_data_accessor(source_acc);
       std::cout << "Initializing infection target buffer ..." << std::endl;
       h.parallel_for(N_threads, [=, this](sycl::id<1> id) {
         size_t idx = 0;
@@ -89,14 +89,13 @@ namespace Sycl_Graph::Epidemiological {
       });
     }
 
-    void invoke(const auto &edge_acc, const auto &source_acc, auto &target_acc, auto &seed_acc,
-                sycl::handler &h) {
+    void invoke(sycl::handler &h, const auto &edge_acc, const auto &source_acc, auto &target_acc, auto &seed_acc) {
       size_t N_edges = edge_acc.size();
       size_t N_threads = std::min({N_edges, N_wg});
 
       // divide the work among the threads
       auto N_per_thread = N_edges / N_threads + 1;
-      const auto state_acc = get_vertex_data_accessor<Source_t>(source_acc);
+      const auto state_acc = get_vertex_data_accessor(source_acc);
 
       h.parallel_for(N_threads, [=, this](sycl::id<1> id) {
         auto seed = seed_acc[id]++;
@@ -138,8 +137,8 @@ namespace Sycl_Graph::Epidemiological {
   template <typename Source_t = SIR_Individual_Vertex_t> struct SIR_Individual_Population_Count
       : public Operation_Base<
             SIR_Individual_Population_Count<Source_t>,
-            Accessor_t<Source_t, sycl::access_mode::read>,
-            Accessor_t<SIR_Individual_State_t, sycl::access_mode::write, Source_t>> {
+            Accessor_t<Source_t, sycl::access_mode::read, OPERATION_BUFFER_SOURCE>,
+            Accessor_t<SIR_Individual_State_t, sycl::access_mode::write, OPERATION_BUFFER_TARGET>> {
     size_t N_pop = 0;
     SIR_Individual_Population_Count(size_t N_pop = 0) : N_pop(N_pop) {
       if constexpr (!is_Vertex_type<Source_t>) {
@@ -147,15 +146,16 @@ namespace Sycl_Graph::Epidemiological {
         this->template set_size<1>(N_pop);
       }
     }
-    void invoke(const auto &source_acc, auto &target_acc, sycl::handler &h) {
+    void invoke(sycl::handler &h, const auto &source_acc, auto &target_acc) {
 #ifdef EPIDEMIOLOGICAL_POPULATION_COUNT_DEBUG
       sycl::stream out(1024, 256, h);
 #endif
+      using SIR_State_Acc_t = sycl::accessor<SIR_Individual_State_t, 1, sycl::access_mode::read>;
       h.single_task([=]() {
         uint32_t N_susceptible = 0;
         uint32_t N_infected = 0;
         uint32_t N_recovered = 0;
-        const auto &state_acc = get_vertex_data_accessor<Source_t>(source_acc);
+        const SIR_State_Acc_t& state_acc = get_vertex_data_accessor(source_acc);
         for (int i = 0; i < state_acc.size(); i++) {
           if (state_acc[i] == SIR_INDIVIDUAL_S) {
             N_susceptible++;

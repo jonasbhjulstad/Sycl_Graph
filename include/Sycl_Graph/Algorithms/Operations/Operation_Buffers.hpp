@@ -41,28 +41,23 @@ namespace Sycl_Graph::Sycl {
 
     auto source_buffers
         = std::tuple_cat(std::make_tuple(source_bufs_0), drop_last_tuple_elem(target_buffers));
-    // verify_buffer_types(source_buffers, target_buffers);
-    auto elem_test = std::get<0>(std::get<0>(source_buffers));
+
     return std::make_tuple(source_buffers, target_buffers);
   }
 
-  // template <sycl::access::mode... Access_modes>
-  // auto operation_buffer_access(sycl::handler& h, Graph_type auto& graph, tuple_type auto& bufs) {
-  //   return std::apply(
-  //       [&](auto&&... buf) {
-  //         return std::make_tuple(buf->template get_access<Access_modes>(h, acc)...);
-  //       },
-  //       bufs);
-  // }
+  template <sycl::access::mode... Access_modes, typename ... Buffer_Ts>
+  auto operation_buffer_access(sycl::handler& h, std::tuple<Buffer_Ts ...>& bufs) {
 
-  template <sycl::access::mode... Access_modes>
-  auto operation_buffer_access(sycl::handler& h, const tuple_type auto& bufs) {
+    static_assert(std::tuple_size_v<std::tuple<Buffer_Ts ...>> > 0);
+
     return std::apply(
-        [&](auto&&... buf) {
-          return std::make_tuple(buf->template get_access<Access_modes>(h, buf)...);
+        [&](auto&... buf) {
+          return std::make_tuple(buf->template get_access<Access_modes>(h)...);
         },
         bufs);
   }
+
+
 
 }  // namespace Sycl_Graph::Sycl
 #endif

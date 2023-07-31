@@ -47,6 +47,9 @@ template <typename T> void population_print(sycl::queue& q, std::shared_ptr<sycl
   std::cout << "S: " << S << " I: " << I << " R: " << R << std::endl;
 }
 
+void population_print(sycl::queue& q, std::shared_ptr<void> buf) {
+}
+
 void print_target_buffers(sycl::queue& q, auto& bufs) {
   std::apply([&](auto&&... buf) {}, bufs);
 }
@@ -81,7 +84,6 @@ auto generate_nodes_edges(uint32_t N_pop, float p_ER, uint32_t seed) {
   auto p_links = std::make_shared<std::vector<SIR_Individual_Edge_t>>(links);
   return std::make_tuple(nodes, links);
 }
-
 
 int main() {
   spdlog::set_level(spdlog::level::debug);
@@ -158,7 +160,6 @@ int main() {
           target_bufs);
       print_shared_ptr_use_count(target_bufs);
     }
-
   }
   return 0;
 }

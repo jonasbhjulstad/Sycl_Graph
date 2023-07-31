@@ -50,18 +50,10 @@ namespace Sycl_Graph::Sycl {
         "Global_Operation_Debug_Logger", Global_Operation_Log_File_Name, true);
   }  // namespace logging
 
-  enum Operation_Buffer_Type : char {
-    OPERATION_BUFFER_CUSTOM = 0,
-    OPERATION_BUFFER_SOURCE = 1,
-    OPERATION_BUFFER_TARGET = 2
-  };
-
-  template <typename T, sycl::access::mode _mode, typename _Size_Predicate_t = T>
+  template <typename T, sycl::access::mode _mode>
   struct Accessor_t {
     typedef T type;
-    typedef _Size_Predicate_t Size_Predicate_t;
     static constexpr sycl::access::mode mode = _mode;
-    static constexpr Operation_Buffer_Type buffer_type = OPERATION_BUFFER_CUSTOM;
   };
 
   template <typename... Ts> using Write_Accessors_t

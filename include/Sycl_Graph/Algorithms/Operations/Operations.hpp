@@ -177,8 +177,6 @@ namespace Sycl_Graph::Sycl {
     template <typename... Args> void initialize(sycl::handler &h, const Args &...args) {}
 
     void _initialize(sycl::handler &h, Graph_type auto &graph, tuple_type auto &bufs) {
-
-
       auto accessors = operation_buffer_access<Acc_Ts::mode...>(h, graph, bufs);
 
       // invocation
@@ -187,17 +185,27 @@ namespace Sycl_Graph::Sycl {
       log_accessors(accessors);
     }
 
-    template <typename... Acc>
-    void __invoke(sycl::handler &h, Graph_type auto &graph, const tuple_type auto &bufs) {
+    void _initialize(sycl::handler &h, Graph_type auto &graph, tuple_type auto &source_bufs,
+                     tuple_type auto &target_bufs, tuple_type auto &custom_bufs) {
+      this->initialize(h, graph, std::tuple_cat(source_bufs, target_bufs, custom_bufs));
+    }
+
+    void __invoke(sycl::handler &h, Graph_type auto &graph, tuple_type auto &&bufs) {
       logger->debug("Global invocation {}, local invocation {}",
                     logging::N_Global_Operation_Invocations++, N_invocations++);
       global_logger->debug("Global invocation {}, local invocation {}",
                            logging::N_Global_Operation_Invocations, N_invocations);
-      auto accessors = operation_buffer_access<Acc_Ts::mode...>(h, graph, bufs, access_modes);
+      auto accessors = operation_buffer_access<Acc_Ts::mode...>(h, bufs);
 
       log_accessors(accessors);
 
-      std::apply([&](auto &...acc) { static_cast<Derived *>(this)->invoke(h, acc...); }, accessors);
+      std::apply([&](auto &&...acc) { static_cast<Derived *>(this)->invoke(h, acc...); },
+                 accessors);
+    }
+
+    void __invoke(sycl::handler &h, Graph_type auto &graph, tuple_type auto &source_bufs,
+                  tuple_type auto &target_bufs, tuple_type auto &custom_bufs) {
+      this->__invoke(h, graph, std::tuple_cat(source_bufs, target_bufs, custom_bufs));
     }
 
     // private:
@@ -208,31 +216,25 @@ namespace Sycl_Graph::Sycl {
                  accessors);
     }
 
-    template <Operation_Buffer_Type obt, Accessor_type Acc_t>
-    auto create_buffer(const Graph_type auto &graph, const Acc_t &acc) const {
+    template <Accessor_type Acc_t>
+    auto create_buffers(const Graph_type auto &graph, const Acc_t &acc) const {
       using Acc_type = typename Acc_t::type;
-      if constexpr (Acc_t::buffer_type == obt) {
-        size_t size = 0;
-
-        if constexpr (graph.template has_type<Acc_type>()) {
-          size = graph.template current_size<Acc_type>();
-        } else {
-          size = this->template get_size<Acc_type>();
-        }
-
+      if constexpr (is_Vertex_type<Acc_type> || is_Edge_type<Acc_type>) {
+        return graph.template get_buffer<Acc_type>();
+      } else {
+        size_t size = this->template get_size<Acc_type>();
         return std::make_shared<sycl::buffer<Acc_type>>(
             sycl::buffer<Acc_type>((sycl::range<1>(size))));
-      } else {
-        return std::shared_ptr<sycl::buffer<Acc_type>>();
       }
     }
 
-    template <Operation_Buffer_Type obt> auto create_buffers(const Graph_type auto &graph) const {
-      return std::apply(
+    auto create_buffers(const Graph_type auto &graph) const {
+      auto bufs = std::apply(
           [&](auto &&...acc) {
             return std::make_tuple(this->template create_buffer<obt>(graph, acc)...);
           },
           accessors);
+      return tuple_filter<std::shared_ptr<void>>(bufs);
     }
   };
 

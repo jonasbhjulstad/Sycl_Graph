@@ -373,6 +373,10 @@ template <typename ...T> struct is_tuple<std::tuple<T...>>: std::true_type {};
 template <typename ...T> struct is_tuple<std::tuple<T...>&>: std::true_type {};
 template <typename ...T> struct is_tuple<std::tuple<T...>&&>: std::true_type {};
 
+template <typename ...T> struct is_tuple<const std::tuple<T...>>: std::true_type {};
+template <typename ...T> struct is_tuple<const std::tuple<T...>&>: std::true_type {};
+template <typename ...T> struct is_tuple<const std::tuple<T...>&&>: std::true_type {};
+
 template <typename T>
 concept tuple_type = is_tuple<T>::value;
 
@@ -522,6 +526,57 @@ struct UniformTupleGenerator<0, T> {
 
 template <std::size_t N, typename T>
 using UniformTuple = typename UniformTupleGenerator<N, T>::type;
+
+namespace detail
+{
+    template <std::size_t Ofst, class Tuple, std::size_t... I>
+    constexpr auto slice_impl(Tuple&& t, std::index_sequence<I...>)
+    {
+        return std::forward_as_tuple(
+            std::get<I + Ofst>(std::forward<Tuple>(t))...);
+    }
+}
+
+template <std::size_t I1, std::size_t I2, class Cont>
+constexpr auto tuple_slice(Cont&& t)
+{
+    static_assert(I2 >= I1, "invalid slice");
+    static_assert(std::tuple_size<std::decay_t<Cont>>::value >= I2,
+        "slice index out of bounds");
+
+    return detail::slice_impl<I1>(std::forward<Cont>(t),
+        std::make_index_sequence<I2 - I1>{});
+}
+
+
+template <typename Filter_t>
+auto tuple_filter(auto tup) {
+    return std::apply(
+        [&](auto first, auto... rest) {
+            auto filtered_rest = [&] {
+                if constexpr (sizeof...(rest)) {
+                    return tuple_filter<Filter_t>(std::tuple{rest...});
+                } else {
+                    return std::tuple{};
+                }
+            }();
+
+            if constexpr (!std::is_same_v<decltype(first), Filter_t>) {
+                return std::tuple_cat(std::tuple{first}, filtered_rest);
+            } else {
+                return filtered_rest;
+            }
+        },
+        tup);
+}
+
+
+template <typename T, typename ... Tuple_Ts>
+constexpr bool tuple_is_all(const std::tuple<Tuple_Ts ...>& tup)
+{
+    return (std::is_same_v<T, Tuple_Ts> && ...);
+}
+
 
 } // namespace Sycl_Graph
 #endif
