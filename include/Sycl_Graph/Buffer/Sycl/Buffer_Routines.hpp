@@ -34,8 +34,8 @@ namespace Sycl_Graph::Sycl {
     }
     return;
   }
-  template <typename T>
-  void buffer_print(std::shared_ptr<sycl::buffer<T, 1>> &buf, sycl::queue &q, const std::string &name = "") {
+  template <typename T> void buffer_print(std::shared_ptr<sycl::buffer<T, 1>> &buf, sycl::queue &q,
+                                          const std::string &name = "") {
     if (buf.size() == 0) {
       return;
     }
@@ -58,18 +58,22 @@ namespace Sycl_Graph::Sycl {
     return;
   }
 
-
   template <typename... Ts>
   void buffer_print(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q) {
     std::apply([&](auto &...buf) { (buffer_print(buf, q), ...); }, bufs);
   }
 
   template <typename... Ts>
-  void buffer_print(std::tuple<std::shared_ptr<sycl::buffer<Ts, 1>>...> &bufs, auto names, sycl::queue &q) {
-    std::apply([&](auto& ... name){std::apply([&](auto &...buf) { (buffer_print(buf, q), ...); }, bufs);}, names);
+  void buffer_print(std::tuple<std::shared_ptr<sycl::buffer<Ts, 1>>...> &bufs, auto names,
+                    sycl::queue &q) {
+    std::apply(
+        [&](auto &...name) {
+          std::apply([&](auto &...buf) { (buffer_print(buf, q), ...); }, bufs);
+        },
+        names);
   }
 
-  //buffer_resize
+  // buffer_resize
 
   template <typename T>
   void buffer_resize(sycl::buffer<T, 1> &buf, sycl::queue &q, size_t new_size) {
@@ -86,8 +90,8 @@ namespace Sycl_Graph::Sycl {
     buf = new_buf;
   }
 
-  template <typename... Ts>
-  sycl::event buffer_resize(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, size_t new_size) {
+  template <typename... Ts> sycl::event buffer_resize(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
+                                                      sycl::queue &q, size_t new_size) {
     std::tuple<sycl::buffer<Ts, 1>...> new_bufs = std::make_tuple(sycl::buffer<Ts, 1>(new_size)...);
     auto event = q.submit([&](sycl::handler &h) {
       auto src_accs = std::make_tuple(
@@ -125,14 +129,15 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <typename... Ts>
-  sycl::event buffer_resize(std::tuple<std::shared_ptr<sycl::buffer<Ts, 1>>...> &bufs, sycl::queue &q, size_t new_size) {
-    auto new_bufs = std::make_tuple(std::make_shared<sycl::buffer<Ts, 1>>(sycl::buffer<Ts, 1>(new_size))...);
+  sycl::event buffer_resize(std::tuple<std::shared_ptr<sycl::buffer<Ts, 1>>...> &bufs,
+                            sycl::queue &q, size_t new_size) {
+    auto new_bufs
+        = std::make_tuple(std::make_shared<sycl::buffer<Ts, 1>>(sycl::buffer<Ts, 1>(new_size))...);
     auto event = q.submit([&](sycl::handler &h) {
-      auto src_accs = std::make_tuple(
-          std::get<std::shared_ptr<sycl::buffer<Ts, 1>>>(bufs)->template get_access<sycl::access::mode::read>(h)...);
-      auto dest_accs = std::make_tuple(
-          std::get<std::shared_ptr<sycl::buffer<Ts, 1>>>(new_bufs)->template get_access<sycl::access::mode::write>(
-              h)...);
+      auto src_accs = std::make_tuple(std::get<std::shared_ptr<sycl::buffer<Ts, 1>>>(bufs)
+                                          ->template get_access<sycl::access::mode::read>(h)...);
+      auto dest_accs = std::make_tuple(std::get<std::shared_ptr<sycl::buffer<Ts, 1>>>(new_bufs)
+                                           ->template get_access<sycl::access::mode::write>(h)...);
       h.parallel_for(new_size, [=](sycl::id<1> i) {
         std::apply(
             [&](auto &...dest_acc) {
@@ -146,7 +151,19 @@ namespace Sycl_Graph::Sycl {
     return event;
   }
 
-  //buffer_copy
+  template <typename T> std::tuple<std::shared_ptr<sycl::buffer<T>>, sycl::event> buffer_create(
+      sycl::queue &q, const std::vector<T> &data) {
+    auto tmp_buf = sycl::buffer<T>(data.data(), sycl::range<1>(data.size()));
+    auto res_buf = std::make_shared<sycl::buffer<T>>(sycl::buffer<T>(sycl::range<1>(data.size())));
+    auto event = q.submit([&](sycl::handler &h) {
+      auto acc = tmp_buf.template get_access<sycl::access::mode::read_write>(h);
+      auto res_acc = res_buf->template get_access<sycl::access::mode::write>(h);
+      h.parallel_for(data.size(), [=](sycl::id<1> i) { res_acc[i] = acc[i]; });
+    });
+    return std::make_tuple(res_buf, event);
+  }
+
+  // buffer_copy
 
   template <typename T>
   inline void buffer_copy(sycl::buffer<T, 1> &buf, sycl::queue &q, const std::vector<T> &vec) {
@@ -162,8 +179,23 @@ namespace Sycl_Graph::Sycl {
   }
 
   template <typename T>
-  sycl::event buffer_add(sycl::buffer<T, 1> &dest_buf, sycl::buffer<T, 1> src_buf, sycl::queue &q,
-                  uint32_t offset = 0) {
+  sycl::event buffer_copy(sycl::queue& q, std::shared_ptr<sycl::buffer<T>>& source_buf, std::shared_ptr<sycl::buffer<T>>& target_buf, sycl::event dep_event = {})
+  {
+    return q.submit([&](sycl::handler& h)
+    {
+      h.depends_on(dep_event);
+      auto source_acc = source_buf->template get_access<sycl::access::mode::read>(h);
+      auto target_acc = target_buf->template get_access<sycl::access::mode::write>(h);
+      h.parallel_for(source_acc.size(), [=](sycl::id<1> i)
+      {
+        target_acc[i] = source_acc[i];
+      });
+    });
+  }
+
+  template <typename T> sycl::event buffer_add(sycl::buffer<T, 1> &dest_buf,
+                                               sycl::buffer<T, 1> src_buf, sycl::queue &q,
+                                               uint32_t offset = 0) {
     if (src_buf.size() == 0) {
       return {};
     }
@@ -180,9 +212,9 @@ namespace Sycl_Graph::Sycl {
     }
     return {};
   }
-  template <typename... Ts>
-  auto buffer_add(std::tuple<sycl::buffer<Ts, 1>...> &dest_bufs,
-                  std::tuple<sycl::buffer<Ts, 1>...> &src_bufs, sycl::queue &q, uint32_t offset = 0) {
+  template <typename... Ts> auto buffer_add(std::tuple<sycl::buffer<Ts, 1>...> &dest_bufs,
+                                            std::tuple<sycl::buffer<Ts, 1>...> &src_bufs,
+                                            sycl::queue &q, uint32_t offset = 0) {
     auto bufsize = std::get<0>(dest_bufs).size();
     static_assert(std::conjunction_v<std::bool_constant<(sizeof(Ts) != 0)>...>,
                   "All buffer types must have non-zero size.");
@@ -191,27 +223,28 @@ namespace Sycl_Graph::Sycl {
     if (bufsize < offset + std::get<0>(src_bufs).size()) {
       resize_event = buffer_resize(dest_bufs, q, bufsize + std::get<0>(src_bufs).size());
     }
-    //get buffer sizes
+    // get buffer sizes
     auto dest_buf_sizes = std::apply(
         [&](auto &...dest_bufs) { return std::make_tuple(dest_bufs.size()...); }, dest_bufs);
     auto src_buf_sizes = std::apply(
         [&](auto &...src_bufs) { return std::make_tuple(src_bufs.size()...); }, src_bufs);
 
-
-    auto events = std::apply([&](auto& ... dest_buf)
-    {
-      return std::apply([&](auto& ... src_buf)
-      {
-        return std::make_tuple(buffer_add(dest_buf, src_buf, q, offset) ...);
-      }, src_bufs);
-    }, dest_bufs);
+    auto events = std::apply(
+        [&](auto &...dest_buf) {
+          return std::apply(
+              [&](auto &...src_buf) {
+                return std::make_tuple(buffer_add(dest_buf, src_buf, q, offset)...);
+              },
+              src_bufs);
+        },
+        dest_bufs);
 
     return events;
   }
 
-  template <typename... Ts>
-  auto buffer_add(std::tuple<sycl::buffer<Ts, 1>...> &dest_bufs,
-                  const std::tuple<std::vector<Ts>...> &src_vecs, sycl::queue &q, uint32_t offset = 0) {
+  template <typename... Ts> auto buffer_add(std::tuple<sycl::buffer<Ts, 1>...> &dest_bufs,
+                                            const std::tuple<std::vector<Ts>...> &src_vecs,
+                                            sycl::queue &q, uint32_t offset = 0) {
     // create buffers for src_vecs
     auto src_bufs = std::apply(
         [&](auto &...src_vecs) {
@@ -222,10 +255,9 @@ namespace Sycl_Graph::Sycl {
     return buffer_add(dest_bufs, src_bufs, q, offset);
   }
 
-  template <typename T>
-  auto buffer_add(std::vector<sycl::buffer<T, 1> &> &bufs,
-                         const std::vector<const std::vector<T> &> &vecs, sycl::queue &q,
-                         const std::vector<uint32_t> &offsets) {
+  template <typename T> auto buffer_add(std::vector<sycl::buffer<T, 1> &> &bufs,
+                                        const std::vector<const std::vector<T> &> &vecs,
+                                        sycl::queue &q, const std::vector<uint32_t> &offsets) {
     std::vector<sycl::event> events(bufs.size());
     for (uint32_t i = 0; i < vecs.size(); ++i) {
       events[i] = buffer_add(bufs[i], vecs[i], q, offsets[i]);
@@ -233,18 +265,16 @@ namespace Sycl_Graph::Sycl {
     return events;
   }
 
-  template <typename T>
-  sycl::event buffer_add(sycl::buffer<T> &buf, const std::vector<T> &data, sycl::queue &q,
-                  uint32_t offset = 0) {
+  template <typename T> sycl::event buffer_add(sycl::buffer<T> &buf, const std::vector<T> &data,
+                                               sycl::queue &q, uint32_t offset = 0) {
     sycl::buffer<T> tmp_buf(data.data(), sycl::range<1>(data.size()));
     return buffer_add(buf, tmp_buf, q, offset);
   }
 
-
   //_ptr overloads
-  template <typename T>
-  sycl::event buffer_add(std::shared_ptr<sycl::buffer<T, 1>> &dest_buf, sycl::buffer<T, 1> src_buf, sycl::queue &q,
-                  uint32_t offset = 0) {
+  template <typename T> sycl::event buffer_add(std::shared_ptr<sycl::buffer<T, 1>> &dest_buf,
+                                               sycl::buffer<T, 1> src_buf, sycl::queue &q,
+                                               uint32_t offset = 0) {
     if (src_buf.size() == 0) {
       return {};
     }
@@ -263,7 +293,8 @@ namespace Sycl_Graph::Sycl {
   }
   template <typename... Ts>
   auto buffer_add(std::tuple<std::shared_ptr<sycl::buffer<Ts, 1>>...> &dest_bufs,
-                  std::tuple<sycl::buffer<Ts, 1>...> &src_bufs, sycl::queue &q, uint32_t offset = 0) {
+                  std::tuple<sycl::buffer<Ts, 1>...> &src_bufs, sycl::queue &q,
+                  uint32_t offset = 0) {
     auto bufsize = std::get<0>(dest_bufs)->size();
     static_assert(std::conjunction_v<std::bool_constant<(sizeof(Ts) != 0)>...>,
                   "All buffer types must have non-zero size.");
@@ -272,27 +303,29 @@ namespace Sycl_Graph::Sycl {
     if (bufsize < offset + std::get<0>(src_bufs).size()) {
       resize_event = buffer_resize(dest_bufs, q, bufsize + std::get<0>(src_bufs).size());
     }
-    //get buffer sizes
+    // get buffer sizes
     auto dest_buf_sizes = std::apply(
         [&](auto &...dest_bufs) { return std::make_tuple(dest_bufs->size()...); }, dest_bufs);
     auto src_buf_sizes = std::apply(
         [&](auto &...src_bufs) { return std::make_tuple(src_bufs.size()...); }, src_bufs);
 
-
-    auto events = std::apply([&](auto& ... dest_buf)
-    {
-      return std::apply([&](auto& ... src_buf)
-      {
-        return std::make_tuple(buffer_add(dest_buf, src_buf, q, offset) ...);
-      }, src_bufs);
-    }, dest_bufs);
+    auto events = std::apply(
+        [&](auto &...dest_buf) {
+          return std::apply(
+              [&](auto &...src_buf) {
+                return std::make_tuple(buffer_add(dest_buf, src_buf, q, offset)...);
+              },
+              src_bufs);
+        },
+        dest_bufs);
 
     return events;
   }
 
   template <typename... Ts>
   auto buffer_add(std::tuple<std::shared_ptr<sycl::buffer<Ts, 1>>...> &dest_bufs,
-                  const std::tuple<std::vector<Ts>...> &src_vecs, sycl::queue &q, uint32_t offset = 0) {
+                  const std::tuple<std::vector<Ts>...> &src_vecs, sycl::queue &q,
+                  uint32_t offset = 0) {
     // create buffers for src_vecs
     auto src_bufs = std::apply(
         [&](auto &...src_vecs) {
@@ -303,18 +336,16 @@ namespace Sycl_Graph::Sycl {
     return buffer_add(dest_bufs, src_bufs, q, offset);
   }
 
-
-  template <typename T>
-  sycl::event buffer_add(std::shared_ptr<sycl::buffer<T>> &buf, const std::vector<T> &data, sycl::queue &q,
-                  uint32_t offset = 0) {
+  template <typename T> sycl::event buffer_add(std::shared_ptr<sycl::buffer<T>> &buf,
+                                               const std::vector<T> &data, sycl::queue &q,
+                                               uint32_t offset = 0) {
     sycl::buffer<T> tmp_buf(data.data(), sycl::range<1>(data.size()));
     return buffer_add(buf, tmp_buf, q, offset);
   }
 
-  //buffer_get
+  // buffer_get
 
-  template <typename T>
-  std::vector<T> buffer_get(sycl::buffer<T> &buf) {
+  template <typename T> std::vector<T> buffer_get(sycl::buffer<T> &buf) {
     auto buf_acc = buf.get_host_access();
     std::vector<T> res(buf.size());
     for (int i = 0; i < buf.size(); ++i) {
@@ -323,23 +354,20 @@ namespace Sycl_Graph::Sycl {
     return res;
   }
 
-  template <typename T>
-  std::vector<T> buffer_get(sycl::buffer<T>& buf, sycl::queue& q)
-  {
+  template <typename T> std::vector<T> buffer_get(sycl::buffer<T> &buf, sycl::queue &q) {
     auto res = std::vector<T>(buf.size());
-    auto res_buf = sycl::buffer<T,1>(res.data(), sycl::range<1>(res.size()));
-    q.submit([&](sycl::handler& h) {
-      auto buf_acc = buf.template get_access<sycl::access::mode::read>(h);
-      auto res_acc = res_buf.template get_access<sycl::access::mode::write>(h);
-      h.parallel_for(buf.size(), [=](sycl::id<1> i) { res_acc[i] = buf_acc[i]; });
-    }).wait();
+    auto res_buf = sycl::buffer<T, 1>(res.data(), sycl::range<1>(res.size()));
+    q.submit([&](sycl::handler &h) {
+       auto buf_acc = buf.template get_access<sycl::access::mode::read>(h);
+       auto res_acc = res_buf.template get_access<sycl::access::mode::write>(h);
+       h.parallel_for(buf.size(), [=](sycl::id<1> i) { res_acc[i] = buf_acc[i]; });
+     }).wait();
 
     return res;
   }
 
-  template <typename T>
-  std::vector<T> buffer_get(sycl::buffer<T, 1> &buf, sycl::queue &q,
-                            const std::vector<uint32_t> &indices) {
+  template <typename T> std::vector<T> buffer_get(sycl::buffer<T, 1> &buf, sycl::queue &q,
+                                                  const std::vector<uint32_t> &indices) {
     auto condition = [&indices](auto i) {
       return std::find(indices.begin(), indices.end(), i) != indices.end();
     };
@@ -348,7 +376,8 @@ namespace Sycl_Graph::Sycl {
 
   template <typename... Ts>
   std::tuple<std::vector<Ts>...> buffer_get(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
-                                            sycl::queue &q, uint32_t offset = 0, uint32_t size = 0) {
+                                            sycl::queue &q, uint32_t offset = 0,
+                                            uint32_t size = 0) {
     return std::make_tuple(buffer_get(std::get<sycl::buffer<Ts, 1>>(bufs), q, offset, size)...);
   }
 
@@ -366,8 +395,7 @@ namespace Sycl_Graph::Sycl {
 
   //_ptr
 
-  template <typename T>
-  std::vector<T> buffer_get(std::shared_ptr<sycl::buffer<T>> buf) {
+  template <typename T> std::vector<T> buffer_get(std::shared_ptr<sycl::buffer<T>> buf) {
     return buf ? buffer_get(*buf) : std::vector<T>();
   }
 
@@ -375,9 +403,9 @@ namespace Sycl_Graph::Sycl {
     return std::apply([&](auto &&...buf) { return std::make_tuple(buffer_get(buf)...); }, bufs);
   }
 
-  template <typename T>
-  std::vector<uint32_t> buffer_get_indices(sycl::buffer<T, 1> &buf, sycl::queue &q,
-                                       bool (*condition)(uint32_t)) {
+  template <typename T> std::vector<uint32_t> buffer_get_indices(sycl::buffer<T, 1> &buf,
+                                                                 sycl::queue &q,
+                                                                 bool (*condition)(uint32_t)) {
     std::vector<uint32_t> res(buf.size());
     sycl::buffer<uint32_t, 1> res_buf(res.data(), sycl::range<1>(buf.size()));
     q.submit([&](sycl::handler &h) {
@@ -393,9 +421,9 @@ namespace Sycl_Graph::Sycl {
     return res;
   }
 
-  template <typename T>
-  std::vector<uint32_t> buffer_get_indices(sycl::buffer<T, 1> &buf, sycl::queue &q,
-                                       const std::vector<T> &elements) {
+  template <typename T> std::vector<uint32_t> buffer_get_indices(sycl::buffer<T, 1> &buf,
+                                                                 sycl::queue &q,
+                                                                 const std::vector<T> &elements) {
     if (buf.size() > 0) {
       std::vector<uint32_t> res(elements.size(), std::numeric_limits<uint32_t>::max());
       sycl::buffer<T, 1> elements_buf(elements.data(), sycl::range<1>(elements.size()));
@@ -426,9 +454,9 @@ namespace Sycl_Graph::Sycl {
     return {};
   }
 
-  template <typename... Ts>
-  void buffer_assign(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                     const std::vector<uint32_t> &indices, const std::tuple<std::vector<Ts>...> &vecs) {
+  template <typename... Ts> void buffer_assign(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
+                                               sycl::queue &q, const std::vector<uint32_t> &indices,
+                                               const std::tuple<std::vector<Ts>...> &vecs) {
     const auto buf_size = std::get<0>(bufs).size();
     auto src_bufs = std::apply(
         [&](const auto &...vecs) {
@@ -467,9 +495,9 @@ namespace Sycl_Graph::Sycl {
 
   template <typename... Ts>
   uint32_t buffer_assign_add(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                         const std::vector<uint32_t> &indices,
-                         const std::tuple<std::vector<Ts>...> &vecs,
-                         uint32_t N_max = std::numeric_limits<uint32_t>::max()) {
+                             const std::vector<uint32_t> &indices,
+                             const std::tuple<std::vector<Ts>...> &vecs,
+                             uint32_t N_max = std::numeric_limits<uint32_t>::max()) {
     const auto buf_size = std::min<uint32_t>(std::get<0>(bufs).size(), N_max);
     if (buf_size > 0 && indices.size() > 0) {
       buffer_assign(bufs, q, indices, vecs);
@@ -501,8 +529,8 @@ namespace Sycl_Graph::Sycl {
 
   template <typename Target_t, typename... Ts>
   uint32_t buffer_assign_add(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                         const std::tuple<std::vector<Ts>...> &vecs,
-                         uint32_t N_max = std::numeric_limits<uint32_t>::max()) {
+                             const std::tuple<std::vector<Ts>...> &vecs,
+                             uint32_t N_max = std::numeric_limits<uint32_t>::max()) {
     const auto &target = std::get<std::vector<Target_t>>(vecs);
     std::vector<uint32_t> indices;
     if (std::get<0>(bufs).size() > 0) {
@@ -514,8 +542,8 @@ namespace Sycl_Graph::Sycl {
   }
 
   // removes elements at offset to offset+size
-  template <typename T>
-  void buffer_remove(sycl::buffer<T, 1> &buf, sycl::queue &q, uint32_t offset = 0, uint32_t size = 0) {
+  template <typename T> void buffer_remove(sycl::buffer<T, 1> &buf, sycl::queue &q,
+                                           uint32_t offset = 0, uint32_t size = 0) {
     if (size == 0) {
       size = buf.size();
     }
@@ -527,9 +555,9 @@ namespace Sycl_Graph::Sycl {
     }
   }
 
-  template <typename... Ts>
-  void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, uint32_t offset = 0,
-                     uint32_t size = 0) {
+  template <typename... Ts> void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
+                                               sycl::queue &q, uint32_t offset = 0,
+                                               uint32_t size = 0) {
     (buffer_remove(std::get<sycl::buffer<Ts, 1>>(bufs), q, offset, size), ...);
   }
 
@@ -547,9 +575,9 @@ namespace Sycl_Graph::Sycl {
     }
   }
 
-  template <typename... Ts>
-  void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q,
-                     const std::vector<uint32_t> &indices) {}
+  template <typename... Ts> void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs,
+                                               sycl::queue &q,
+                                               const std::vector<uint32_t> &indices) {}
 
   template <typename T, typename... Ts>
   void buffer_remove(std::tuple<sycl::buffer<Ts, 1>...> &bufs, sycl::queue &q, auto condition) {
@@ -557,9 +585,9 @@ namespace Sycl_Graph::Sycl {
     buffer_remove(bufs, q, indices);
   }
 
-  template <typename T>
-  sycl::buffer<T, 1> buffer_combine(sycl::queue &q, sycl::buffer<T, 1>& buf0,
-                                    sycl::buffer<T, 1>& buf1, uint32_t size0 = 0, uint32_t size1 = 0) {
+  template <typename T> sycl::buffer<T, 1> buffer_combine(sycl::queue &q, sycl::buffer<T, 1> &buf0,
+                                                          sycl::buffer<T, 1> &buf1,
+                                                          uint32_t size0 = 0, uint32_t size1 = 0) {
     if (size0 == 0) {
       size0 = buf0.size();
     }
@@ -596,37 +624,31 @@ namespace Sycl_Graph::Sycl {
   //   return seeds;
   // }
 
-  auto generate_seed_buf(uint32_t N, uint32_t seed) {
-  std::vector<uint32_t> vec(N);
-  std::iota(vec.begin(), vec.end(), 0);
-  std::mt19937 mt(seed);
-  std::generate(vec.begin(), vec.end(), [&]() { return mt(); });
-  return std::make_shared<sycl::buffer<uint32_t>>(
-      sycl::buffer<uint32_t>(vec.data(), sycl::range<1>(N)));
-}
+  auto generate_seed_buf(sycl::queue& q, uint32_t N, uint32_t seed) {
+    std::vector<uint32_t> vec(N);
+    std::iota(vec.begin(), vec.end(), 0);
+    std::mt19937 mt(seed);
+    std::generate(vec.begin(), vec.end(), [&]() { return mt(); });
+    return buffer_create(q, vec);
+  }
 
-
-  //Initialize sycl::buffer with data ownership tied to the scope of the buffer
-  template <typename T>
-  auto buffer_initialize(const std::vector<T>& data)
-  {
-    auto deleter = [](T* ptr) { delete[] ptr; };
+  // Initialize sycl::buffer with data ownership tied to the scope of the buffer
+  template <typename T> auto buffer_initialize(const std::vector<T> &data) {
+    auto deleter = [](T *ptr) { delete[] ptr; };
     std::shared_ptr<T> p_data(new T[data.size()], deleter);
     std::copy(data.begin(), data.end(), p_data.get());
     auto buf = sycl::buffer<T, 1>(p_data, sycl::range<1>(data.size()));
     return buf;
   }
 
-  template <typename T>
-  auto buffer_initialize_shared(const std::vector<T>& data)
-  {
-    auto deleter = [](T* ptr) { delete[] ptr; };
+  template <typename T> auto buffer_initialize_shared(const std::vector<T> &data) {
+    auto deleter = [](T *ptr) { delete[] ptr; };
     std::shared_ptr<T> p_data(new T[data.size()], deleter);
     std::copy(data.begin(), data.end(), p_data.get());
-    auto buf = std::make_shared<sycl::buffer<T, 1>>(sycl::buffer<T, 1>(p_data, sycl::range<1>(data.size())));
+    auto buf = std::make_shared<sycl::buffer<T, 1>>(
+        sycl::buffer<T, 1>(p_data, sycl::range<1>(data.size())));
     return buf;
   }
 
-
-}  // namespace Sycl_Graph
+}  // namespace Sycl_Graph::Sycl
 #endif

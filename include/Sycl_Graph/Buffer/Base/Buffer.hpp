@@ -1,7 +1,7 @@
 #ifndef SYCL_GRAPH_BUFFER_BASE_HPP
 #define SYCL_GRAPH_BUFFER_BASE_HPP
 #include <Sycl_Graph/type_helpers.hpp>
-
+#include <Sycl_Graph/Algorithms/Operations/Operation_Types.hpp>
 namespace Sycl_Graph {
   template <typename T>
   concept Buffer_type = true;
@@ -15,16 +15,16 @@ namespace Sycl_Graph {
     std::shared_ptr<spdlog::logger> logger;
 
     Buffer(uint32_t N,
-           std::string logger_filename = "buffer_" + std::to_string(logging::Buffer_id++))
+           std::string logger_filename = "buffer_" + std::to_string(Sycl::logging::Buffer_id++))
         : bufs(std::make_tuple(std::vector<Ds>(N))...),
           logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log", true)) {
       logger->set_level(spdlog::level::debug);
       curr_size = N;
     }
 
-    Buffer(sycl::queue &q, const std::vector<Ds> &...data, const sycl::property_list &props = {},
-           std::string logger_filename = "buffer_" + std::to_string(logging::Buffer_id++))
-        : q(q), logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log", true)) {
+    Buffer(const std::vector<Ds> &...data, const sycl::property_list &props = {},
+           std::string logger_filename = "buffer_" + std::to_string(Sycl::logging::Buffer_id++))
+        : logger(spdlog::basic_logger_mt(logger_filename, logger_filename + ".log", true)) {
       logger->set_level(spdlog::level::debug);
       this->bufs = std::make_tuple(data...);
       curr_size = std::get<0>(bufs)->size();
@@ -73,20 +73,20 @@ namespace Sycl_Graph {
     }
 
 
-    template <typename D> void remove_elements(bool (*cond)(const D &)) {
-      auto N_removed = buffer_remove(bufs, q, cond);
-      curr_size -= N_removed;
-    }
+    // template <typename D> void remove_elements(bool (*cond)(const D &)) {
+    //   auto N_removed = buffer_remove(bufs, cond);
+    //   curr_size -= N_removed;
+    // }
 
-    void remove_elements(uint32_t offset, uint32_t size) {
-      auto N_removed = buffer_remove(bufs, q, offset, size);
-      curr_size -= N_removed;
-    }
+    // void remove_elements(uint32_t offset, uint32_t size) {
+    //   auto N_removed = buffer_remove(bufs, q, offset, size);
+    //   curr_size -= N_removed;
+    // }
 
-    void remove_elements(const std::vector<uint32_t> &indices) {
-      auto N_removed = buffer_remove(bufs, q, indices);
-      curr_size -= N_removed;
-    }
+    // void remove_elements(const std::vector<uint32_t> &indices) {
+    //   auto N_removed = buffer_remove(bufs, q, indices);
+    //   curr_size -= N_removed;
+    // }
 
     Buffer<Ds...> &operator=(const Buffer<Ds...> &other) {
       bufs = other.bufs;

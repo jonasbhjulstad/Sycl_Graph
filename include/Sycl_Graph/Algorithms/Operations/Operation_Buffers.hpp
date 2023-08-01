@@ -31,19 +31,19 @@ namespace Sycl_Graph::Sycl {
         operations);
   }
 
-  template <Graph_type Graph_t, Operation_type... Op>
-  auto create_operation_buffer_sequence(const Graph_t& graph, const std::tuple<Op...>& operations) {
-    using Op_0 = std::tuple_element_t<0, std::tuple<Op...>>;
-    const auto& op_0 = std::get<0>(operations);
-    auto source_bufs_0 = op_0.template create_buffers<OPERATION_BUFFER_SOURCE>(graph);
+  // template <Graph_type Graph_t, Operation_type... Op>
+  // auto create_operation_buffer_sequence(const Graph_t& graph, const std::tuple<Op...>& operations) {
+  //   using Op_0 = std::tuple_element_t<0, std::tuple<Op...>>;
+  //   const auto& op_0 = std::get<0>(operations);
+  //   auto source_bufs_0 = op_0.template create_buffers(graph);
 
-    auto target_buffers = std::apply([&](const auto& ... op){return std::make_tuple(op.template create_buffers<OPERATION_BUFFER_TARGET>(graph)...);}, operations);
+  //   auto target_buffers = std::apply([&](const auto& ... op){return std::make_tuple(op.template create_buffers<OPERATION_BUFFER_TARGET>(graph)...);}, operations);
 
-    auto source_buffers
-        = std::tuple_cat(std::make_tuple(source_bufs_0), drop_last_tuple_elem(target_buffers));
+  //   auto source_buffers
+  //       = std::tuple_cat(std::make_tuple(source_bufs_0), drop_last_tuple_elem(target_buffers));
 
-    return std::make_tuple(source_buffers, target_buffers);
-  }
+  //   return std::make_tuple(source_buffers, target_buffers);
+  // }
 
   template <sycl::access::mode... Access_modes, typename ... Buffer_Ts>
   auto operation_buffer_access(sycl::handler& h, std::tuple<Buffer_Ts ...>& bufs) {

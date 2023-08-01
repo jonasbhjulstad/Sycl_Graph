@@ -47,8 +47,7 @@ template <typename T> void population_print(sycl::queue& q, std::shared_ptr<sycl
   std::cout << "S: " << S << " I: " << I << " R: " << R << std::endl;
 }
 
-void population_print(sycl::queue& q, std::shared_ptr<void> buf) {
-}
+void population_print(sycl::queue& q, std::shared_ptr<void> buf) {}
 
 void print_target_buffers(sycl::queue& q, auto& bufs) {
   std::apply([&](auto&&... buf) {}, bufs);
@@ -68,21 +67,32 @@ void print_shared_ptr_use_count(auto& pp_tup) {
 auto generate_nodes_edges(uint32_t N_pop, float p_ER, uint32_t seed) {
   std::vector<uint32_t> node_ids(N_pop);
   std::iota(node_ids.begin(), node_ids.end(), 0);
-  std::vector<SIR_Individual_Edge_t> links
-      = Sycl_Graph::random_connect<SIR_Individual_Edge_t>(node_ids, node_ids, p_ER, false, seed);
+  std::vector<std::pair<uint32_t, uint32_t>> links
+      = Sycl_Graph::random_connect(node_ids, node_ids, p_ER, false, seed);
   // generate initial infections with p_I0
   float p_I0 = 0.1f;
   // initialize mt
   std::mt19937 mt(seed);
   std::bernoulli_distribution dist(p_I0);
 
-  std::vector<SIR_Individual_Vertex_t> nodes(N_pop);
-  for (auto&& node : nodes) {
-    node.data = dist(mt) ? SIR_INDIVIDUAL_I : SIR_INDIVIDUAL_S;
-  }
-  auto p_nodes = std::make_shared<std::vector<SIR_Individual_Vertex_t>>(nodes);
-  auto p_links = std::make_shared<std::vector<SIR_Individual_Edge_t>>(links);
+  std::vector<SIR_Individual_State_t> nodes(N_pop);
+  std::generate(nodes.begin(), nodes.end(),
+                [&]() { return dist(mt) ? SIR_INDIVIDUAL_I : SIR_INDIVIDUAL_S; });
   return std::make_tuple(nodes, links);
+}
+
+template <typename... Acc_Ts, typename Derived>
+sycl::event invoke_operation(sycl::queue& q, Operation_Base<Derived, Acc_Ts...>& op, auto&& bufs,
+                             sycl::event dep_event = {}) {
+  return q.submit([&](sycl::handler& h) {
+    h.depends_on(dep_event);
+    auto accs = std::apply(
+        [&](auto&&... buf) {
+          return std::make_tuple(buf->template get_access<Acc_Ts::mode>(h)...);
+        },
+        bufs);
+    std::apply([&](auto&&... acc) { op.__invoke(h, acc...); }, accs);
+  });
 }
 
 int main() {
@@ -101,64 +111,81 @@ int main() {
   float p_I = 1e-1f;
   float p_R = 1e-1f;
 
-  std::for_each(links.begin(), links.end(), [&](auto& edge) { edge.data = p_I; });
-
+  std::vector<float> link_data(links.size(), p_I);
   std::cout << "Number of links: " << links.size() << std::endl;
 
+
   {
-    auto e_buf = make_edge_buffer(q, links);
-    auto v_buf = make_vertex_buffer(q, nodes);
-
-    Sycl_Graph::Buffer_Pack vertex_buffer(v_buf);
-    Sycl_Graph::Buffer_Pack edge_buffer(e_buf);
-    Sycl_Graph::Sycl::Graph graph(vertex_buffer, edge_buffer, q);
-
-    std::cout << "Graph has " << graph.N_vertices() << " vertices and " << graph.N_edges()
-              << " edges." << std::endl;
+    auto [node_buf, node_event] = buffer_create(q, nodes);
+    auto [link_id_buf, link_id_event] = buffer_create(q, links);
+    auto [link_data_buf, link_data_event] = buffer_create(q, link_data);
     q.wait();
 
     {
-      SIR_Individual_Population_Count<> vertex_count_op(N_pop);
-      SIR_Individual_Population_Count<SIR_Individual_State_t> state_count_op(N_pop);
-      SIR_Individual_Recovery<> recovery_op(0.1, N_wg);
-      SIR_Individual_Infection<SIR_Individual_State_t> infection_op(0.1, N_wg, N_pop);
+      SIR_Individual_Population_Count vertex_count_op(N_pop);
+      SIR_Individual_Population_Count state_count_op(N_pop);
+      SIR_Individual_Recovery recovery_op(0.1, N_wg);
+      SIR_Individual_Infection infection_op(0.1, N_wg, N_pop);
+      SIR_State_Injection inject_op{};
 
-      auto ops = std::make_tuple(vertex_count_op, recovery_op, infection_op);
+      auto ops = std::make_tuple(vertex_count_op, recovery_op, state_count_op, infection_op,
+                                 state_count_op);
 
-      auto seeds = Sycl_Graph::Sycl::generate_seed_buf(N_wg, seed);
-      q.wait();
-      auto custom_buffers
-          = std::make_tuple(std::tuple<>{}, std::make_tuple(seeds), std::make_tuple(seeds));
-
-      auto [source_bufs, target_bufs] = create_operation_buffer_sequence(graph, ops);
-      // check that target_buf size is the same as op size
-      static_assert(std::tuple_size_v<decltype(target_bufs)> == std::tuple_size_v<decltype(ops)>);
-      // check that source_buf size is the same as op size
-      static_assert(std::tuple_size_v<decltype(source_bufs)> == std::tuple_size_v<decltype(ops)>);
-      print_shared_ptr_use_count(target_bufs);
-
-      auto assert_buf_tuple = [&](auto&& buf_tup) {
-        std::apply([&](auto&&... buf) { (assert(buf != nullptr), ...); }, buf_tup);
-      };
-
-      std::apply([&](auto&&... p_buf) { (assert_buf_tuple(p_buf), ...); }, target_bufs);
-
+      auto [seeds, seed_gen_event] = Sycl_Graph::Sycl::generate_seed_buf(q, N_wg, seed);
       q.wait();
 
-      auto events = invoke_operation_sequence(graph, ops, source_bufs, target_bufs, custom_buffers);
+      auto [vertex_rec_buf, vrec_create_event] = buffer_create(q, nodes);
+      auto [vertex_inf_buf, vinf_create_event] = buffer_create(q, nodes);
+      std::vector<uint32_t> zero_buf = {0,0,0};
 
-      print_shared_ptr_use_count(target_bufs);
+      auto [init_count_buf, init_count_create_event] = buffer_create(q, zero_buf);
+      auto [rec_count_buf, rec_count_create_event] = buffer_create(q, zero_buf);
+      auto [inf_count_buf, inf_count_create_event] = buffer_create(q, zero_buf);
+      // auto node_buf = graph.template get_buffer<SIR_Individual_Vertex_t>();
+      // auto e_buf = graph.template get_buffer<SIR_Individual_Edge_t>();
+      // Source buffers
+      auto init_count_source = node_buf;
+      auto rec_source = node_buf;
+      auto rec_count_source = vertex_rec_buf;
+      auto inf_source = vertex_rec_buf;
+      auto inf_count_source = vertex_inf_buf;
+      auto inject_source = vertex_inf_buf;
 
-      std::apply([&](auto&... events) { (events.wait(), ...); }, events);
+      // Targets
+      auto init_count_target = init_count_buf;
+      auto rec_target = vertex_rec_buf;
+      auto rec_count_target = rec_count_buf;
+      auto inf_target = vertex_inf_buf;
+      auto inf_count_target = inf_count_buf;
+      auto inject_target = node_buf;
 
       q.wait();
 
-      std::apply(
-          [&](auto&&... buf_tup) {
-            (std::apply([&](auto&&... buf) { (population_print(q, buf), ...); }, buf_tup), ...);
-          },
-          target_bufs);
-      print_shared_ptr_use_count(target_bufs);
+      auto init_count_event = invoke_operation(
+          q, vertex_count_op, std::make_tuple(init_count_source, init_count_target), sycl::event{});
+      auto rec_event = invoke_operation(
+          q, recovery_op, std::make_tuple(rec_source, rec_target, seeds), init_count_event);
+      auto rec_count_event = invoke_operation(
+          q, state_count_op, std::make_tuple(rec_count_source, rec_count_target), rec_event);
+      auto buffer_copy_event = buffer_copy(q, rec_target, inf_target, rec_event);
+      auto inf_event = invoke_operation(
+          q, infection_op, std::make_tuple(link_id_buf, link_data_buf, inf_source, inf_target, seeds), buffer_copy_event);
+      auto inf_count_event = invoke_operation(
+          q, state_count_op, std::make_tuple(inf_count_source, inf_count_target), inf_event);
+      auto inject_event = invoke_operation(
+          q, inject_op, std::make_tuple(inject_source, inject_target), inf_count_event);
+
+      auto events = std::make_tuple(init_count_event, rec_event, rec_count_event, inf_event,
+                                    inf_count_event, inject_event);
+
+      auto pop_bufs = std::make_tuple(init_count_buf, vertex_rec_buf, rec_count_buf, vertex_inf_buf,
+                                      inf_count_buf, node_buf);
+
+      std::apply([&](auto&... ev) { (ev.wait(), ...); }, events);
+
+      q.wait();
+
+      std::apply([&](auto&&... pop_buf) { (population_print(q, pop_buf), ...); }, pop_bufs);
     }
   }
   return 0;
