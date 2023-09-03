@@ -1,73 +1,93 @@
-cmake_minimum_required(VERSION 3.14...3.22)
-
-# ---- Project ----
-
-# Note: update this to your new project's name and version
-project(
-  Sycl_Graph
-  VERSION 1.0
-  LANGUAGES CXX
-)
-
-# ---- Include guards ----
-
-if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
-  message(
-    FATAL_ERROR
-      "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
-  )
+set(ENABLE_TESTING ON)
+cmake_minimum_required(VERSION 3.5)
+project(Sycl_Graph)
+set(PROJECT_NAMESPACE "Sycl_Graph")
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_C_COMPILER_WORKS ON)
+set(CMAKE_CXX_COMPILER_WORKS ON)
+# find_program(CCACHE "ccache")
+# if(${CCACHE})
+# set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+# set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
+# endif()
+set(SYCL_HEADER_INCLUDE_DIR "/opt/intel/oneapi/compiler/latest/linux/include/sycl")
+if(WIN32)
+    set(PYTHON_EXECUTABLE "C:\\Users\\jonas\\anaconda3\\envs\\Network_MPC\\python.exe")
+else()
+    set(PYTHON_EXECUTABLE "/home/man/.pyenv/versions/3.9.13/bin/python3")
+    set(PYTHON_INCLUDE_DIR "/home/man/.pyenv/versions/3.9.13/include/python3.9")
+    set(PYTHON_LIBS "/home/man/.pyenv/versions/3.9.13/libs/python3.9")
+    set(Python3_ROOT_DIR "/home/man/.pyenv/versions/3.9.13/")
 endif()
-#create compile_commands
+# list(APPEND CMAKE_MODULE_PATH "/home/arch/Downloads/cmake-checks-cache/CMakeChecksCache/")
+set(SPIR_FORMAT __DEVICE_SPIR64__)
+
+set(PYBIND11_PYTHON_VERSION "3.9")
+include(FindPython3)
+find_package(Python3 COMPONENTS Interpreter Development)
+set(SYCL_CUSTOM_TARGETS "nvptx64-nvidia-cuda")
+
+# set(SYCL_CUSTOM_TARGETS "spir64_x86_64")
+# set(SYCL_CUSTOM_TARGETS "native_cpu")
+set(CMAKE_WARN_DEPRECATED OFF)
+option(DEFAULT_WARNING_SUPPRESSION "Default Warning Suppression" ON)
+set(SYCL_CUSTOM_FLAGS -sycl-std=2020 -fsycl -Wno-linker-warnings -Rno-debug-disables-optimization -fsycl-targets=${SYCL_CUSTOM_TARGETS} -Wno-unknown-cuda-version)
+find_package(IntelSYCL REQUIRED)
+find_package(ortools CONFIG REQUIRED)
+set(PYTHON_ENV_CMAKE_MODULE_DIR "/home/man/mambaforge/envs/gt/lib/python3.11/site-packages/pybind11/share/cmake/pybind11")
+include(cmake/external_packages.cmake)
+include(cmake/custom_executable.cmake)
+include(cmake/custom_binder.cmake)
+# include(cmake/ccache.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_compile_options(-fsycl)
-add_link_options(-fsycl)
-set(SYCL_GRAPH_CUDA_FLAGS -fsycl-targets=nvptx64-nvidia-cuda)
-option(SYCL_GRAPH_USE_CUDA "Enable CUDA support" ON)
-include(${PROJECT_SOURCE_DIR}/cmake/external_packages.cmake)
-set(SYCL_GRAPH_CLANG_BINARY_DIR "${IntelDPCPP_DIR}/../bin-llvm/clang++" CACHE STRING "Path to OneAPI clang/clang++ directory")
-set(CMAKE_COLOR_MAKEFILE ON)
-include(${PROJECT_SOURCE_DIR}/cmake/custom_executable.cmake)
-include(${PROJECT_SOURCE_DIR}/cmake/custom_library.cmake)
-include(${PROJECT_SOURCE_DIR}/cmake/ccache.cmake)
-# ---- Add source files ----
-add_compile_options(-Wfatal-errors)
-add_compile_options(-Wdeprecated-declarations)
-# Note: globbing sources is considered bad practice as CMake's generators may not detect new files
-# automatically. Keep that in mind when changing files, or explicitly mention them here.
-file(GLOB_RECURSE SYCL_GRAPH_HEADER_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
-# ---- Create library ----
-add_custom_interface_library(Sycl_Graph)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#Sycl warning suppression flags
+set(CMAKE_UNITY_BUILD OFF)
+add_compile_options("-O0")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options("-stdlib=libstdc++")
+endif()
+# set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*")
+add_compile_options("-Wno-deprecated-declarations")
+add_compile_options("-Wno-unknown-cuda-version")
+
+# set(VERBOSE_WARNING_FLAGS -pedantic -pedantic-errors -Wextra -Waggregate-return -Wcast-align -Wcast-qual  -Wchar-subscripts  -Wcomment -Wconversion -Wdisabled-optimization -Wno-error -Wfloat-equal  -Wformat  -Wformat=2 -Wformat-nonliteral -Wformat-security -Wformat-y2k -Wimplicit  -Wimport  -Winit-self  -Winline -Winvalid-pch  -Wlong-long -Wmissing-braces -Wmissing-field-initializers -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wpacked  -Wpadded -Wparentheses  -Wpointer-arith -Wredundant-decls -Wreturn-type -Wsequence-point  -Wshadow -Wno-sign-compare  -Wstack-protector -Wstrict-aliasing -Wstrict-aliasing=2 -Wswitch  -Wswitch-default -Wswitch-enum -Wtrigraphs  -Wuninitialized -Wunknown-pragmas  -Wunreachable-code -Wunused -Wunused-function  -Wunused-label  -Wunused-parameter -Wunused-value  -Wunused-variable  -Wvariadic-macros -Wvolatile-register-var -Wwrite-strings)
+set(VERBOSE_WARNING_FLAGS -Wno-error -Wall -Wextra -pedantic-errors -Wconversion -Wsign-conversion)
+option(ENABLE_VERBOSE_WARNINGS "Enable Verbose Warnings" OFF)
+if(${ENABLE_VERBOSE_WARNINGS})
+    add_compile_options(${VERBOSE_WARNING_FLAGS})
+endif()
+
+set(SYCL_GRAPH_DATA_DIR "${PROJECT_SOURCE_DIR}/data" CACHE INTERNAL "SYCL_GRAPH_DATA_DIR")
+set(SYCL_GRAPH_LOG_DIR "${PROJECT_SOURCE_DIR}/log" CACHE INTERNAL "SYCL_GRAPH_LOG_DIR")
+set(SYCL_GRAPH_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include" CACHE INTERNAL "SYCL_GRAPH_INCLUDE_DIR")
+
+
+configure_file("${PROJECT_SOURCE_DIR}/include/Sycl_Graph/Utils/path_config.hpp.in" "${PROJECT_SOURCE_DIR}/include/Sycl_Graph/Utils/path_config.hpp")
+
+add_compile_options("-fcolor-diagnostics")
 add_subdirectory(src)
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
-
-target_compile_options(${PROJECT_NAME} INTERFACE "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
-
-target_include_directories(
-  ${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-                         $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
-)
-
-set(SYCL_GRAPH_DOXYGEN_IN ${PROJECT_SOURCE_DIR}/docs_doxygen/Doxyfile.in)
-set(SYCL_GRAPH_DOXYGEN_OUT ${PROJECT_BINARY_DIR}/Doxyfile.out)
 add_subdirectory(test)
-add_compile_options("-Xclang -fcolor-diagnostics")
-add_compile_options("-v")
-# add_compile_options("-fdiagnostics-format=gcc")
-# ---- Create an installable target ----
-# this allows users to install and find the library via `find_package()`.
+add_subdirectory(Executables)
 
-# the location where the project's version header will be placed should match the project's regular
-# header paths
-string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+find_package(Doxygen)
 
-packageProject(
-  NAME ${PROJECT_NAME}
-  VERSION ${PROJECT_VERSION}
-  NAMESPACE ${PROJECT_NAME}
-  BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
-  INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
-  VERSION_HEADER "${VERSION_HEADER_LOCATION}"
-  COMPATIBILITY SameMajorVersion
-  DEPENDENCIES ""
-)
+if (DOXYGEN_FOUND)
+    # set input and output files
+    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs_doxygen/Doxyfile.in)
+    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.out)
+
+    # request to configure the file
+    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+    message("Doxygen build started")
+
+    # Note: do not put "ALL" - this builds docs together with application EVERY TIME!
+    add_custom_target(SYCL_GRAPH_docs
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM )
+else (DOXYGEN_FOUND)
+  message("Doxygen need to be installed to generate the doxygen documentation")
+endif (DOXYGEN_FOUND)

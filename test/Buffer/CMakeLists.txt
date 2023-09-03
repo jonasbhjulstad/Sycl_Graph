@@ -1,2 +1,0 @@
-add_custom_test(buffer_assign_add)
-add_custom_executable(buffer_access)

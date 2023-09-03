@@ -1,0 +1,7 @@
+add_sycl_library(Degrees)
+target_link_libraries(Degrees PRIVATE cppitertools Complete_Graph)
+add_custom_library(Edge_Limits SHARED)
+
+
+add_library(Metrics INTERFACE)
+target_link_libraries(Metrics INTERFACE Degrees Edge_Limits Math)
