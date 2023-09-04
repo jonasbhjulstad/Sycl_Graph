@@ -3,8 +3,9 @@
 #include <Sycl_Graph/Graph/Graph.hpp>
 #include <Sycl_Graph/Metrics/Edge_Limits.hpp>
 #include <Sycl_Graph/Utils/Buffer_Utils.hpp>
-#include <Sycl_Graph/Utils/Math.hpp>
+#include <Sycl_Graph/Utils/Math_Inl.hpp>
 #include <Sycl_Graph/Utils/work_groups.hpp>
+#include <Sycl_Graph/Generation/Complete_Graph.hpp>
 #include <oneapi/dpl/random>
 
 namespace Sycl_Graph {
@@ -34,7 +35,7 @@ template <typename RNG>
         if (dist(rng)) {
           auto from_idx = floor_div(e_idx, N_from);
           auto to_idx = e_idx % N_to;
-          e_acc[e_idx] = std::make_pair(from_idx, to_idx);
+          e_acc[e_idx] = Edge_t(from_idx, to_idx);
           count++;
         }
       }
@@ -80,6 +81,19 @@ template <typename RNG>
   sycl::event random_connect(sycl::queue &q, sycl::buffer<uint32_t, 1> &from,
                              sycl::buffer<uint32_t, 1> &to, sycl::buffer<RNG> &rngs, const float p,
                              Edgebuf_t<1> &edges, sycl::buffer<uint32_t> &N_edges_tot) {
+
+    if (p == 1)
+    {
+      auto N_tot_acc = sycl::host_accessor<uint32_t>(N_edges_tot);
+      N_tot_acc[0] = bipartite_graph_max_edges(from.size(), to.size());
+      return {};
+    }
+    else if (p == 0)
+    {
+      auto N_tot_acc = sycl::host_accessor<uint32_t>(N_edges_tot);
+      N_tot_acc[0] = bipartite_graph_max_edges(from.size(), to.size());
+      return {};
+    }
     auto N_edges_max = edges.get_range()[0];
     if (N_edges_max < bipartite_graph_max_edges(from.size(), to.size()) * p) {
       throw std::runtime_error(
@@ -111,7 +125,16 @@ template <typename RNG>
   template <typename RNG>
   std::vector<Edge_t> random_connect(sycl::queue &q, const std::vector<uint32_t> &from,
                                      const std::vector<uint32_t> &to,
-                                     const std::vector<uint32_t> &seeds, const auto p) {
+                                     const std::vector<uint32_t> &seeds,
+                                     const auto p, bool directed) {
+    if (p == 1)
+    {
+      return complete_graph(from.size() + to.size(), directed, true);
+    }
+    else if (p == 0)
+    {
+      return {};
+    }
     std::vector<RNG> rngs;
     rngs.reserve(seeds.size());
     for (auto seed : seeds) {

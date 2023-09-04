@@ -1,0 +1,5 @@
+add_library(SBM STATIC SBM_Types.cpp)
+target_compile_options(SBM PUBLIC ${SYCL_CUSTOM_FLAGS})
+target_compile_options(SBM PUBLIC ${DEFAULT_WARNING_FLAGS})
+target_include_directories(SBM PUBLIC ${SYCL_GRAPH_INCLUDE_DIR})
+target_link_options(SBM PUBLIC ${SYCL_CUSTOM_FLAGS})

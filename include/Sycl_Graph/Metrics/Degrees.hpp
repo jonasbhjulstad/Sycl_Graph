@@ -2,6 +2,8 @@
 #define SYCL_GRAPH_DEGREES_HPP
 #include <Sycl_Graph/Common.hpp>
 #include <Sycl_Graph/Graph/Graph.hpp>
+namespace Sycl_Graph
+{
 sycl::event compute_in_degrees(sycl::queue &q, Edgebuf_t<1> &edges, sycl::buffer<uint32_t, 1> &degrees);
 
 sycl::event compute_out_degrees(sycl::queue &q, Edgebuf_t<1> &edges, sycl::buffer<uint32_t, 1> &degrees);
@@ -12,4 +14,5 @@ sycl::event compute_undirected_degrees(sycl::queue &q, Edgebuf_t<1> &edges, sycl
 
 sycl::event compute_undirected_affinity_degrees(sycl::queue& q, Edgebuf_t<1>& edges, sycl::buffer<uint32_t, 1>& vcm, uint32_t N_communities, sycl::buffer<uint32_t, 1>& degrees);
 
+}// namespace Sycl_Graph
 #endif

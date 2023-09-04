@@ -38,6 +38,7 @@ set(PYTHON_ENV_CMAKE_MODULE_DIR "/home/man/mambaforge/envs/gt/lib/python3.11/sit
 include(cmake/external_packages.cmake)
 include(cmake/custom_executable.cmake)
 include(cmake/custom_binder.cmake)
+include(cmake/combine_archives.cmake)
 # include(cmake/ccache.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)

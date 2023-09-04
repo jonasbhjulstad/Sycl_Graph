@@ -2,6 +2,7 @@
 #include <Sycl_Graph/Metrics/Degrees.hpp>
 #include <Sycl_Graph/Utils/Math.hpp>
 #include <Sycl_Graph/Utils/work_groups.hpp>
+namespace Sycl_Graph {
 sycl::event compute_in_degrees(sycl::queue &q, Edgebuf_t<1> &edges,
                                sycl::buffer<uint32_t, 1> &degrees) {
   uint32_t N_vertices = degrees.get_range()[0];
@@ -86,3 +87,4 @@ sycl::event compute_undirected_affinity_degrees(sycl::queue &q, Edgebuf_t<1> &ed
     });
   });
 }
+}  // namespace Sycl_Graph
