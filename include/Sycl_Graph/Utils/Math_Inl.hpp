@@ -3,7 +3,7 @@
 #include <cmath>
 namespace Sycl_Graph {
   inline std::size_t floor_div(std::size_t a, std::size_t b) {
-    return static_cast<std::size_t>(std::floor(static_cast<double>(a) / static_cast<double>(b)));
+    return static_cast<std::size_t>(std::floor(static_cast<float>(a) / static_cast<float>(b)));
   }
 
   inline std::size_t n_choose_k(std::size_t n, std::size_t k) {

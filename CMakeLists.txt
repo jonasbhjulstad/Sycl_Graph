@@ -31,7 +31,14 @@ set(SYCL_CUSTOM_TARGETS "nvptx64-nvidia-cuda")
 # set(SYCL_CUSTOM_TARGETS "native_cpu")
 set(CMAKE_WARN_DEPRECATED OFF)
 option(DEFAULT_WARNING_SUPPRESSION "Default Warning Suppression" ON)
-set(SYCL_CUSTOM_FLAGS -sycl-std=2020 -fsycl -Wno-linker-warnings -Rno-debug-disables-optimization -fsycl-targets=${SYCL_CUSTOM_TARGETS} -Wno-unknown-cuda-version)
+set(SYCL_CUSTOM_FLAGS -sycl-std=2020 -fsycl -Wno-linker-warnings -Rno-debug-disables-optimization -Wno-unknown-cuda-version)
+
+
+#if string is empty
+if(NOT "${SYCL_CUSTOM_TARGETS}" STREQUAL "")
+    set(SYCL_CUSTOM_FLAGS ${SYCL_CUSTOM_FLAGS} -fsycl-targets=${SYCL_CUSTOM_TARGETS})
+endif()
+message(WARNING "SYCL_CUSTOM_FLAGS: ${SYCL_CUSTOM_FLAGS}")
 find_package(IntelSYCL REQUIRED)
 find_package(ortools CONFIG REQUIRED)
 set(PYTHON_ENV_CMAKE_MODULE_DIR "/home/man/mambaforge/envs/gt/lib/python3.11/site-packages/pybind11/share/cmake/pybind11")
@@ -66,9 +73,16 @@ set(SYCL_GRAPH_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include" CACHE INTERNAL "SYCL_
 
 
 configure_file("${PROJECT_SOURCE_DIR}/include/Sycl_Graph/Utils/path_config.hpp.in" "${PROJECT_SOURCE_DIR}/include/Sycl_Graph/Utils/path_config.hpp")
+# configure_file("${PROJECT_SOURCE_DIR}/include/Sycl_Graph/Utils/Sycl_Targets.hpp.in" "${PROJECT_SOURCE_DIR}/include/Sycl_Graph/Utils/Sycl_Targets.hpp")
+
+
 
 add_compile_options("-fcolor-diagnostics")
 add_subdirectory(src)
+set(Generation_Libraries SBM_Types Complete_Graph)
+set(Metric_Libraries Degrees Edge_Limits)
+set(Util_Libraries Math)
+
 add_subdirectory(test)
 add_subdirectory(Executables)
 

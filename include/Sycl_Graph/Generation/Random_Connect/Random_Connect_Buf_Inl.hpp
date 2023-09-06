@@ -126,12 +126,8 @@ template <typename RNG>
   std::vector<Edge_t> random_connect(sycl::queue &q, const std::vector<uint32_t> &from,
                                      const std::vector<uint32_t> &to,
                                      const std::vector<uint32_t> &seeds,
-                                     const auto p, bool directed) {
-    if (p == 1)
-    {
-      return complete_graph(from.size() + to.size(), directed, true);
-    }
-    else if (p == 0)
+                                     const auto p) {
+    if (p == 0)
     {
       return {};
     }

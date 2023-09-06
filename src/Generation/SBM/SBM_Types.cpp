@@ -31,24 +31,25 @@ namespace Sycl_Graph {
 
   std::size_t SBM_Graph_t::get_N_connections() const { return edges.size(); }
 
-  SBM_Graph_t read_SBM_graph(std::shared_ptr<Edge_t>& p_edge, std::shared_ptr<uint32_t>& N_edges,
-                             uint32_t N_connections, const std::vector<uint32_t>& p_vertices,
-                             const std::vector<uint32_t>& community_sizes) {
+  SBM_Graph_t read_SBM_graph(Edge_t* p_edge, uint32_t* N_edges,
+                             uint32_t N_connections, const std::vector<uint32_t>& vertices_flat,
+                             const std::vector<uint32_t>& community_sizes, sycl::queue& q) {
     auto N_communities = community_sizes.size();
     std::vector<std::vector<Edge_t>> edges(N_connections);
-    auto edge_offsets = USM::shared_usm_partial_sum(N_edges, N_connections);
+    std::vector<uint32_t> edge_offsets(N_connections, 0);
+    USM::read_device_usm(edge_offsets, N_edges, q).wait();
     std::vector<uint32_t> vertex_offsets(N_communities, 0);
     std::partial_sum(community_sizes.begin(), community_sizes.end(), vertex_offsets.begin());
     for (int con_idx = 0; con_idx < N_connections; con_idx++) {
       edges[con_idx]
-          = std::vector<Edge_t>(p_edge.get() + edge_offsets[con_idx],
-                                p_edge.get() + edge_offsets[con_idx] + N_edges.get()[con_idx]);
+          = std::vector<Edge_t>(p_edge + ((con_idx == 0) ? 0 : edge_offsets[con_idx]),
+                                p_edge + ((con_idx == 0) ? 0 : edge_offsets[con_idx]) + N_edges[con_idx]);
     }
     std::vector<std::vector<uint32_t>> vertices(N_communities);
     for (int c_idx = 0; c_idx < N_communities; c_idx++) {
       vertices[c_idx]
-          = std::vector<uint32_t>(p_vertices.data() + vertex_offsets[c_idx],
-                                  p_vertices.data() + vertex_offsets[c_idx] + community_sizes[c_idx]);
+          = std::vector<uint32_t>(vertices_flat.data() + vertex_offsets[c_idx],
+                                  vertices_flat.data() + vertex_offsets[c_idx] + community_sizes[c_idx]);
     }
 
     return {edges, vertices};

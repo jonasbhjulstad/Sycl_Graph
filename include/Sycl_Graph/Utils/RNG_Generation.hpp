@@ -38,6 +38,18 @@ namespace Sycl_Graph::USM
         auto rngs = generate_rngs<RNG>(N, seed);
         return USM::make_shared_usm<RNG>(q, rngs);
     }
+
+    template <typename RNG>
+    auto generate_usm_rngs(sycl::queue& q, auto N, auto seed, sycl::event& event)
+    {
+        auto rngs = generate_rngs<RNG>(N, seed);
+        auto p_rngs = sycl::malloc_device<RNG>(N, q);
+        event = q.submit([&](sycl::handler& h)
+        {
+            h.copy(rngs.data(), p_rngs, N);
+        });
+        return p_rngs;
+    }
 }
 
 #endif

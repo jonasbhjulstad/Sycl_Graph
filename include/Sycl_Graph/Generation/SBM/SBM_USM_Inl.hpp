@@ -8,22 +8,23 @@
 namespace Sycl_Graph::USM {
 
   template <typename RNG>
-  sycl::event generate_SBM(sycl::queue& q, const std::shared_ptr<uint32_t>& vertices,
+  sycl::event generate_SBM(sycl::queue& q, uint32_t* vertices,
                            const std::vector<uint32_t>& community_sizes,
-                           const std::vector<std::vector<float>>& p_mat, const std::shared_ptr<RNG>& rngs,
-                           uint32_t N_rngs, const std::shared_ptr<Edge_t>& edges,
-                           const std::shared_ptr<uint32_t>& N_edges,
+                           const std::vector<std::vector<float>>& p_mat, RNG* rngs, uint32_t N_rngs,
+                           Edge_t* edges, uint32_t* N_edges,
                            uint32_t N_edges_max = std::numeric_limits<uint32_t>::max()) {
     auto N_communities = community_sizes.size();
-    auto N_connections = complete_graph_max_edges(N_communities);
+    auto N_connections = complete_graph_max_edges(N_communities, false, true);
     auto nd_range = get_nd_range(q, N_rngs);
     std::vector<sycl::event> sample_events(N_connections);
     auto edge_offset = 0;
-    std::vector<Edge_t> ccm = complete_graph(N_communities);
+    std::vector<Edge_t> ccm = complete_graph(N_communities, false, true);
 
     std::vector<uint32_t> community_offsets(N_communities);
-    std::partial_sum(community_sizes.begin(), community_sizes.end(), community_offsets.begin());
-
+    for (int i = 0; i < N_communities; i++) {
+      community_offsets[i]
+          = std::accumulate(community_sizes.begin(), community_sizes.begin() + i, 0);
+    }
     // Distribute edge allocated space across connections (if too low)
     auto max_connection_edges = SBM_distributed_max_edges(community_sizes, N_edges_max);
     std::vector<uint32_t> edge_offsets(N_connections);
@@ -31,31 +32,30 @@ namespace Sycl_Graph::USM {
                      edge_offsets.begin());
 
     using p_u32_t = std::shared_ptr<uint32_t>;
-    sycl::event sort_event;
+    // sycl::event sort_event;
     // Random connect between all communities
-    std::for_each(ccm.begin(), ccm.end(), [=, con_idx = 0](const Edge_t connection) mutable {
-      auto p = p_mat[connection.from()][connection.to()];
-      sample_events[con_idx] = random_connect(
-          q, std::forward<const p_u32_t>(shared_offset(vertices, community_offsets[connection.from()])),
-          std::forward<const p_u32_t>(shared_offset(vertices, community_offsets[connection.to()])),
-          std::forward<const std::shared_ptr<RNG>>(rngs), p, community_sizes[connection.from()],
-          community_sizes[connection.to()], N_rngs, max_connection_edges[con_idx],
-          std::forward<const std::shared_ptr<Edge_t>>(shared_offset(edges, edge_offsets[con_idx])),
-          std::forward<const p_u32_t>(shared_offset(N_edges, con_idx)));
-      con_idx++;
-    });
+    // std::for_each(ccm.begin(), ccm.end(), [&, con_idx = 0](const Edge_t connection) mutable {
+    //   auto p = p_mat[connection.from()][connection.to()];
+    //   auto p_from = vertices + community_offsets[connection.from()];
+    //   auto p_to = vertices + community_offsets[connection.to()];
+    //   auto p_edges = edges + edge_offsets[con_idx];
+    //   auto p_N_edges = N_edges + con_idx;
 
-
-    // // Merge generated edges
-    // auto N_edges_tot = make_shared_usm<uint32_t>(q, 1);
-    // auto N_per_work_item = get_N_per_work_item(N_edges_max, nd_range);
-    // auto sort_event = q.submit([&](sycl::handler& h) {
-    //   h.depends_on(sample_events);
-    //   h.single_task(Merge_Edge_Vectors(
-    //       std::forward<const std::shared_ptr<Edge_t>>(edges), std::forward<const p_u32_t>(N_edges),
-    //       std::forward<const p_u32_t>(N_edges_tot), N_rngs, N_per_work_item));
+    //   sample_events[con_idx]
+    //       = random_connect(q, p_from, p_to, rngs, p, community_sizes[connection.from()],
+    //                        community_sizes[connection.to()], N_rngs,
+    //                        max_connection_edges[con_idx], p_edges, p_N_edges);
+    //   con_idx++;
     // });
+    sample_events[0]
+        = random_connect(q, vertices, vertices, rngs, p_mat[0][0], community_sizes[0],
+                         community_sizes[0], N_rngs, max_connection_edges[0], edges, N_edges);
 
+    // Merge generated edges
+    auto sort_event = q.submit([&](sycl::handler& h) {
+      h.depends_on(sample_events);
+      h.single_task(Merge_Edge_Vectors(edges, N_edges, N_connections, N_edges));
+    });
     return sort_event;
   }
 
@@ -67,18 +67,24 @@ namespace Sycl_Graph::USM {
     auto N_vertices = std::accumulate(community_sizes.begin(), community_sizes.end(), 0);
     auto N_connections = complete_graph_max_edges(N_communities);
     auto N_edges_max = complete_graph_max_edges(N_vertices);
-    auto N_edges_tot = make_shared_usm<uint32_t>(q, 1);
-    auto edges = make_shared_usm<Edge_t>(q, N_edges_max);
+    auto edges = sycl::malloc_device<Edge_t>(N_edges_max, q);
     std::vector<uint32_t> v_idx(N_vertices);
     std::iota(v_idx.begin(), v_idx.end(), 0);
-    auto p_vertices = make_shared_usm<uint32_t>(q, v_idx);
-    auto N_edges = make_shared_usm<uint32_t>(q, N_connections);
-    auto rngs = generate_shared_usm_rngs<RNG>(q, N_rngs, seed);
-
+    sycl::event v_event;
+    auto p_vertices = initialize_device_usm(v_idx, q, v_event);
+    auto N_edges = sycl::malloc_shared<uint32_t>(N_connections, q);
+    sycl::event rng_event;
+    auto rngs = generate_usm_rngs<RNG>(q, N_rngs, seed, rng_event);
+    v_event.wait();
+    rng_event.wait();
     auto event = generate_SBM(q, p_vertices, community_sizes, p_mat, rngs, N_rngs, edges, N_edges,
                               N_edges_max);
-
-    return read_SBM_graph(edges, N_edges, N_connections, v_idx, community_sizes);
+    sycl::free(p_vertices, q);
+    sycl::free(rngs, q);
+    auto graph = read_SBM_graph(edges, N_edges, N_connections, v_idx, community_sizes, q);
+    sycl::free(edges, q);
+    sycl::free(N_edges, q);
+    return graph;
   }
 
   auto planted_SBM_p_mat(float p_in, float p_out, uint32_t N_communities) {

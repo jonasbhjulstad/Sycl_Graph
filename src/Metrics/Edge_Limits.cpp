@@ -6,7 +6,7 @@ namespace Sycl_Graph {
 
   std::size_t complete_graph_max_edges(std::size_t N_vertices, bool directed, bool self_loops) {
     std::size_t N_edges
-        = (N_vertices * (N_vertices - 1) / 2) * (directed ? 2 : 1) - (self_loops ? 0 : N_vertices);
+        = ((N_vertices * (N_vertices - 1))/2 + (self_loops ? N_vertices : 0))*(directed ? 2 : 1) ;
     return N_edges;
   }
 
