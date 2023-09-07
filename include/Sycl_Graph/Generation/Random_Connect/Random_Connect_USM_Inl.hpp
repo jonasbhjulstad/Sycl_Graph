@@ -2,6 +2,7 @@
 #define SYCL_GRAPH_GENERATION_RANDOM_CONNECT_USM_INL_HPP
 #include <Sycl_Graph/Generation/Complete_Graph.hpp>
 #include <Sycl_Graph/Metrics/Edge_Limits.hpp>
+#include <Sycl_Graph/Common_Kernels/Merge_Vectors.hpp>
 #include <Sycl_Graph/Utils/Buffer_Utils.hpp>
 #include <Sycl_Graph/Utils/Math_Inl.hpp>
 #include <Sycl_Graph/Utils/work_groups.hpp>
@@ -31,29 +32,6 @@ namespace Sycl_Graph::USM {
     });
   }
 
-  struct Merge_Edge_Vectors {
-    Merge_Edge_Vectors(Edge_t* p_edges, uint32_t* N_edges_tot, uint32_t N_global, uint32_t* N_edges)
-        : e_acc(p_edges), N_global(N_global), N_edges_tot(N_edges_tot), N_edges(N_edges) {}
-    void operator()() const {
-      auto N_merged_edges = 0;
-      auto offset = 0;
-      for (int i = 0; i < N_global; i++) {
-        for (int j = 0; j < N_edges[i]; j++) {
-          e_acc[N_merged_edges] = e_acc[offset + j];
-          N_merged_edges++;
-        }
-        offset += N_edges[i];
-      }
-      N_edges_tot[0] = N_merged_edges;
-    }
-
-    const uint32_t N_global;
-
-  private:
-    Edge_t* e_acc;
-    uint32_t* N_edges_tot;
-    uint32_t* N_edges;
-  };
 
   template <typename RNG>
   sycl::event random_connect(sycl::queue& q, uint32_t* from, uint32_t* to, RNG* rngs, const float p,
@@ -73,7 +51,7 @@ namespace Sycl_Graph::USM {
     sample_event.wait();
     auto sort_event = q.submit([&](sycl::handler& h) {
       h.depends_on(sample_event);
-      h.single_task(Merge_Edge_Vectors(edges, N_edges_tot, N_rngs, p_N_edges));
+      h.single_task(Merge_Vectors<Edge_t>(edges, N_edges_tot, N_rngs, p_N_edges));
     });
     q.wait();
     sycl::free(p_N_edges, q);

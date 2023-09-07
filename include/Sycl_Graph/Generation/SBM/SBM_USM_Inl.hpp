@@ -3,6 +3,7 @@
 #include <Sycl_Graph/Generation/Random_Connect.hpp>
 #include <Sycl_Graph/Generation/SBM/SBM_Types.hpp>
 #include <Sycl_Graph/Metrics/Edge_Limits.hpp>
+#include <Sycl_Graph/Common_Kernels/Merge_Vectors.hpp>
 #include <Sycl_Graph/Utils/RNG_Generation.hpp>
 #include <Sycl_Graph/Utils/work_groups.hpp>
 namespace Sycl_Graph::USM {
@@ -54,7 +55,7 @@ namespace Sycl_Graph::USM {
     // Merge generated edges
     auto sort_event = q.submit([&](sycl::handler& h) {
       h.depends_on(sample_events);
-      h.single_task(Merge_Edge_Vectors(edges, N_edges, N_connections, N_edges));
+      h.single_task(Merge_Vectors<Edge_t>(edges, N_edges, N_connections, N_edges));
     });
     return sort_event;
   }
