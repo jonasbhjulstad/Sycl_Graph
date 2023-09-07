@@ -10,6 +10,12 @@
             "problemMatcher": []
         },
         {
+            "label": "configure - Release",
+            "type": "shell",
+            "command": "cmake -B ${workspaceFolder}/build -S ${workspaceFolder} -DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/cmake/toolchains/Intel_x86_Arch.cmake -DCMAKE_BUILD_TYPE=Release -GNinja",
+            "problemMatcher": []
+        },
+        {
             "label": "build",
             "type": "shell",
             "command": "cmake --build ${workspaceFolder}/build --parallel 10",

@@ -109,7 +109,18 @@
         "*.ipp": "cpp",
         "__nullptr": "cpp",
         "ranges": "cpp",
-        "__functional_base": "cpp"
+        "__functional_base": "cpp",
+        "any": "cpp",
+        "future": "cpp",
+        "stdfloat": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp",
+        "__tree": "cpp",
+        "queue": "cpp",
+        "stack": "cpp",
+        "ios": "cpp",
+        "__bit_reference": "cpp",
+        "filesystem": "cpp"
     },
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
@@ -216,5 +227,7 @@
     "C_Cpp_Runner.cppStandard": "c++20",
     "C_Cpp_Runner.cStandard": "c11",
     "C_Cpp_Runner.enableWarnings": true,
-    "C_Cpp_Runner.warningsAsError": false
+    "C_Cpp_Runner.warningsAsError": false,
+    //add default includepath
+    "C_Cpp.default.includePath": ["/opt/intel/oneapi/compiler/2023.2.0/linux/include/sycl/"]
 }
