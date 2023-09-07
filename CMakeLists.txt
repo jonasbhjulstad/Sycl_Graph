@@ -39,7 +39,6 @@ set(SYCL_CUSTOM_FLAGS -sycl-std=2020 -fsycl -Wno-linker-warnings -Rno-debug-disa
 if(NOT "${SYCL_CUSTOM_TARGETS}" STREQUAL "")
     set(SYCL_CUSTOM_FLAGS ${SYCL_CUSTOM_FLAGS} -fsycl-targets=${SYCL_CUSTOM_TARGETS})
 endif()
-message(WARNING "SYCL_CUSTOM_FLAGS: ${SYCL_CUSTOM_FLAGS}")
 #
 if (NOT ${IntelSYCL_FOUND})
     find_package(IntelSYCL REQUIRED)
