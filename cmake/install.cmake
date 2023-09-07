@@ -18,7 +18,7 @@ packageProject(
   # (optional) option to install only header files with matching pattern
   INCLUDE_HEADER_PATTERN "*.hpp"
   # semicolon separated list of the project's dependencies
-  DEPENDENCIES "Static_RNG 1.0.0; cppitertools 2.1.0"
+  DEPENDENCIES "oneDPL 2022.2.0; cppitertools 2.1.0; IntelSYCL 2022.2.0"
   # (optional) create a header containing the version info
   # Note: that the path to headers should be lowercase
   VERSION_HEADER "${PROJECT_NAME}/version.h"

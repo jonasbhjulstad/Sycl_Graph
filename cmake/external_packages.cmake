@@ -20,6 +20,7 @@ CPMFindPackage(
 )
 
 find_package(oneDPL REQUIRED)
+message(WARNING "OneDPL version: ${oneDPL_VERSION}")
 find_package(pybind11 CONFIG HINTS ${PYTHON_ENV_CMAKE_MODULE_DIR})
 # CPMFindPackage(
 #     NAME pybind11

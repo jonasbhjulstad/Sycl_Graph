@@ -1,4 +1,0 @@
-add_sycl_library(Degrees)
-target_link_libraries(Degrees PRIVATE Complete_Graph)
-add_sycl_library(Edge_Limits)
-target_link_libraries(Edge_Limits PRIVATE cppitertools)
