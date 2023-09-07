@@ -40,6 +40,7 @@ namespace Sycl_Graph {
     return N_edges_tot;
   }
 
+
   std::vector<std::size_t> SBM_max_connection_edges(const std::vector<uint32_t>& commmunity_sizes)
   {
     auto N_communities = commmunity_sizes.size();
@@ -61,6 +62,7 @@ namespace Sycl_Graph {
     }
     return N_edges;
   }
+
 
   std::vector<std::size_t> SBM_distributed_max_edges(const std::vector<uint32_t>& community_sizes, uint32_t N_max_edges)
   {

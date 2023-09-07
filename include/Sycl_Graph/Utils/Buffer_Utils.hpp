@@ -16,6 +16,11 @@ namespace Sycl_Graph {
       h.copy(acc, result.data());
     });
   }
+
+  void events_wait(std::vector<sycl::event>& events)
+  {
+    std::for_each(events.begin(), events.end(), [](sycl::event& e) { e.wait(); });
+  }
 }  // namespace Sycl_Graph
 namespace Sycl_Graph::USM {
 

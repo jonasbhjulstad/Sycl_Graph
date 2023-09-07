@@ -53,8 +53,8 @@ template <typename RNG>
   };
 
 
-  struct Merge_Edge_Vectors {
-    Merge_Edge_Vectors(sycl::accessor<Edge_t> e_acc,
+  struct Merge_Vectors<Edge_t> {
+    Merge_Vectors<Edge_t>(sycl::accessor<Edge_t> e_acc,
                         read_accessor<uint32_t>& count_acc,
                        write_accessor<uint32_t>& Ntot_acc, uint32_t Npw)
         : e_acc(e_acc), count_acc(count_acc), Ntot_acc(Ntot_acc), N_per_work_item(Npw) {}
@@ -117,7 +117,7 @@ template <typename RNG>
       auto e_acc = edges.template get_access<sycl::access::mode::read_write>(h);
       auto count_acc = edge_counts.template get_access<sycl::access::mode::read>(h);
       auto Ntot_acc = N_edges_tot.template get_access<sycl::access::mode::write>(h);
-      h.single_task(Merge_Edge_Vectors(e_acc, count_acc, Ntot_acc, N_per_work_item));
+      h.single_task(Merge_Vectors<Edge_t>(e_acc, count_acc, Ntot_acc, N_per_work_item));
     });
     return sort_event;
   }

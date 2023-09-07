@@ -20,7 +20,7 @@ namespace Sycl_Graph::USM {
       auto count = 0;
       for (auto e_idx = gid * N_per_work_item; e_idx < (gid + 1) * N_per_work_item; ++e_idx) {
         if (e_idx > N_edges_max) break;
-        if (dist(rng)) {
+        if (true) {
           auto from_idx = floor_div(e_idx, N_from);
           auto to_idx = e_idx % N_to;
 
